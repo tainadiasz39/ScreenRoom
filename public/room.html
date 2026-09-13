@@ -1,0 +1,384 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScreenRoom Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
+body { background:#080a11; color:#f1f5f9; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+.topbar { height:56px; background:rgba(13,17,28,0.95); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+.main-layout { flex:1; display:flex; overflow:hidden; position:relative; }
+.voice-sidebar { width:220px; background:#0a0e18; border-right:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; padding:12px; gap:8px; flex-shrink:0; }
+.voice-card { display:flex; align-items:center; gap:8px; padding:8px; border-radius:10px; background:rgba(255,255,255,0.03); font-size:0.8rem; }
+.avatar { width:28px; height:28px; border-radius:50%; background:#6366f1; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.75rem; }
+.stage { flex:1; display:flex; align-items:center; justify-content:center; background:#06080e; padding:10px; position:relative; }
+video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:contain; border-radius:12px; background:#000; cursor:pointer; }
+.stage:fullscreen video { max-height:100vh; width:100vw; border-radius:0; }
+.chat-panel { width:0; background:#0d111c; border-left:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; transition:0.3s; overflow:hidden; }
+.chat-panel.open { width:280px; }
+.chat-messages { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; font-size:0.8rem; }
+.dock-bar { height:68px; background:#0d111c; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; gap:8px; }
+.dbtn { background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.1); padding:8px 14px; border-radius:10px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.dbtn.pri { background:#6366f1; border:none; }
+.dbtn.danger { background:#ef4444; border:none; }
+.dbtn.muted { background:#ef4444; }
+.vslider { -webkit-appearance:none; width:80px; height:4px; border-radius:4px; background:rgba(255,255,255,0.2); outline:none; cursor:pointer; }
+.vslider::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:#6366f1; cursor:pointer; }
+.toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#1f2937; border:1px solid #6366f1; color:#fff; padding:8px 18px; border-radius:20px; font-size:0.85rem; opacity:0; transition:0.3s; pointer-events:none; }
+.toast.show { opacity:1; }
+.diag-badge { font-size:0.75rem; padding:4px 8px; border-radius:6px; background:#1e293b; color:#94a3b8; font-weight:700; }
+#voiceAudios { display:none; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div style="display:flex; align-items:center; gap:8px;">
+    <button class="dbtn" onclick="location.href='/'">←</button>
+    <span id="roomTitle" style="font-weight:700;">Sala</span>
+    <span class="diag-badge" id="diagStatus">WebRTC: Pronto</span>
+  </div>
+  <span style="font-size:0.8rem; color:#94a3b8;">👥 <span id="viewerCount">0</span></span>
+</div>
+
+<div class="main-layout">
+  <div class="voice-sidebar">
+    <div style="font-size:0.75rem; font-weight:800; color:#818cf8;">🔊 SALA DE VOZ</div>
+    <div id="voiceList" style="display:flex; flex-direction:column; gap:6px; overflow-y:auto;"></div>
+  </div>
+
+  <div class="stage" id="stageContainer">
+    <div id="emptyState" style="text-align:center; color:#94a3b8;">
+      <div style="font-size:3rem;">🖥️</div>
+      <h3 style="color:#fff; margin:6px 0;" id="emptyTitle">Transmissão Desligada</h3>
+      <p style="font-size:0.85rem;" id="emptySub">Conecte-se na call ao lado ou aguarde a transmissão.</p>
+    </div>
+    <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
+  </div>
+
+  <div class="chat-panel" id="chatPanel">
+    <div style="padding:10px; border-bottom:1px solid rgba(255,255,255,0.08); font-weight:700;">💬 Chat</div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div style="padding:8px; display:flex; gap:6px;">
+      <input type="text" id="chatInput" placeholder="Mensagem..." style="flex:1; padding:8px; border-radius:8px; border:1px solid #374151; background:#111827; color:#fff;">
+      <button class="dbtn pri" onclick="sendChat()">></button>
+    </div>
+  </div>
+</div>
+
+<div class="dock-bar">
+  <div style="display:flex; gap:6px;">
+    <button class="dbtn pri" id="btnVoice" onclick="toggleVoice()">🎙️ Call</button>
+    <button class="dbtn" id="btnMic" onclick="toggleMic()" style="display:none;">🎤 Mic</button>
+    <button class="dbtn" id="btnStream" onclick="toggleStream()" style="display:none;">📡 Tela</button>
+  </div>
+  <div style="display:flex; gap:6px; align-items:center;">
+    <button class="dbtn" id="btnVol" onclick="toggleMuteStream()">🔊</button>
+    <input type="range" class="vslider" id="volSlider" min="0" max="100" value="100" oninput="setVolume(this.value)">
+    <button class="dbtn" onclick="toggleFullscreen()">⛶</button>
+    <button class="dbtn" onclick="copyLink()">📋 Link</button>
+    <button class="dbtn" onclick="toggleChat()">💬</button>
+  </div>
+</div>
+
+<div id="voiceAudios"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const urlParams = new URLSearchParams(window.location.search);
+const role = urlParams.get('role') || 'viewer';
+const roomId = window.location.pathname.split('/room/')[1];
+const myName = (role === 'host') ? 'Host' : 'User_' + Math.floor(Math.random()*100);
+
+document.getElementById('roomTitle').textContent = '#' + roomId;
+const video = document.getElementById('screenVideo');
+const emptyState = document.getElementById('emptyState');
+const voiceAudios = document.getElementById('voiceAudios');
+const diagStatus = document.getElementById('diagStatus');
+
+let isInVoice = false, localVoiceStream = null, voicePeers = {}, isMicMuted = false;
+let localScreenStream = null, screenPeers = {};
+let iceCandidatesQueue = {};
+
+// STUN & TURN RELAYS CERTIFICADOS
+const iceConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.services.mozilla.com' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelay',
+      credential: 'openrelay'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelay',
+      credential: 'openrelay'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelay',
+      credential: 'openrelay'
+    }
+  ],
+  iceTransportPolicy: 'all',
+  iceCandidatePoolSize: 10
+};
+
+socket.emit('join-room', { roomId, userName: myName, isHost: (role === 'host') });
+if (role === 'host') document.getElementById('btnStream').style.display = 'inline-flex';
+
+function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
+function updateDiag(t, col) { diagStatus.textContent = t; if (col) diagStatus.style.color = col; }
+
+// ======================== CALL DE VOZ ========================
+async function toggleVoice() {
+  if (!isInVoice) {
+    try {
+      localVoiceStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      });
+      isInVoice = true;
+      document.getElementById('btnVoice').className = 'dbtn danger';
+      document.getElementById('btnVoice').innerHTML = '🔴 Sair';
+      document.getElementById('btnMic').style.display = 'inline-flex';
+      socket.emit('join-voice', { roomId, micMuted:false });
+      showToast('🎙️ Conectado na Call!');
+    } catch(e) { alert('Erro no microfone: ' + e.message); }
+  } else {
+    if (localVoiceStream) localVoiceStream.getTracks().forEach(t=>t.stop());
+    localVoiceStream = null;
+    for (let id in voicePeers) voicePeers[id].close();
+    voicePeers = {};
+    voiceAudios.innerHTML = '';
+    isInVoice = false;
+    document.getElementById('btnVoice').className = 'dbtn pri';
+    document.getElementById('btnVoice').innerHTML = '🎙️ Call';
+    document.getElementById('btnMic').style.display = 'none';
+    socket.emit('leave-voice', { roomId });
+  }
+}
+
+function toggleMic() {
+  if (!localVoiceStream) return;
+  isMicMuted = !isMicMuted;
+  localVoiceStream.getAudioTracks().forEach(t => t.enabled = !isMicMuted);
+  document.getElementById('btnMic').className = isMicMuted ? 'dbtn muted' : 'dbtn';
+  document.getElementById('btnMic').innerHTML = isMicMuted ? '🚫 Mudo' : '🎤 Mic';
+  socket.emit('voice-mute-toggle', { roomId, muted: isMicMuted });
+}
+
+socket.on('voice-joined', async ({ existingUsers }) => {
+  for (const uid of existingUsers) await createVoicePeer(uid, true);
+});
+socket.on('user-joined-voice', async ({ userId }) => {
+  await createVoicePeer(userId, false);
+});
+socket.on('user-left-voice', ({ userId }) => {
+  if (voicePeers[userId]) { voicePeers[userId].close(); delete voicePeers[userId]; }
+  const a = document.getElementById('va_' + userId); if (a) a.remove();
+});
+
+async function createVoicePeer(targetId, isInit) {
+  if (voicePeers[targetId]) voicePeers[targetId].close();
+  const pc = new RTCPeerConnection(iceConfig);
+  voicePeers[targetId] = pc;
+  if (localVoiceStream) localVoiceStream.getTracks().forEach(t => pc.addTrack(t, localVoiceStream));
+  pc.ontrack = (e) => {
+    let a = document.getElementById('va_' + targetId);
+    if (!a) { a = document.createElement('audio'); a.id = 'va_' + targetId; a.autoplay = true; voiceAudios.appendChild(a); }
+    a.srcObject = e.streams[0];
+    a.play().catch(()=>{});
+  };
+  pc.onicecandidate = (e) => { if (e.candidate) socket.emit('voice-ice-candidate', { to: targetId, candidate: e.candidate }); };
+  if (isInit) {
+    const o = await pc.createOffer(); await pc.setLocalDescription(o);
+    socket.emit('voice-offer', { to: targetId, offer: o });
+  }
+}
+socket.on('voice-offer', async ({ from, offer }) => {
+  let pc = voicePeers[from];
+  if (!pc) { await createVoicePeer(from, false); pc = voicePeers[from]; }
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  const a = await pc.createAnswer(); await pc.setLocalDescription(a);
+  socket.emit('voice-answer', { to: from, answer: a });
+});
+socket.on('voice-answer', async ({ from, answer }) => { if (voicePeers[from]) await voicePeers[from].setRemoteDescription(new RTCSessionDescription(answer)); });
+socket.on('voice-ice-candidate', async ({ from, candidate }) => { if (voicePeers[from]) try{ await voicePeers[from].addIceCandidate(new RTCIceCandidate(candidate)); }catch(e){} });
+
+socket.on('voice-update', (users) => {
+  document.getElementById('voiceList').innerHTML = users.map(u => `
+    <div class="voice-card">
+      <div class="avatar">${u.name.substring(0,2).toUpperCase()}</div>
+      <div style="flex:1; overflow:hidden; text-overflow:ellipsis;">${u.name}</div>
+      <span>${u.micMuted ? '🚫' : '🎙️'}</span>
+    </div>
+  `).join('');
+});
+
+// ======================== TRANSMISSÃO DE TELA (HOST) ========================
+async function toggleStream() {
+  if (!localScreenStream) {
+    try {
+      localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: true
+      });
+      video.srcObject = localScreenStream;
+      video.muted = true;
+      video.style.display = 'block';
+      emptyState.style.display = 'none';
+      document.getElementById('btnStream').innerHTML = '⏹️ Parar';
+      updateDiag('Transmitindo', '#34d399');
+      socket.emit('host-status', { roomId, isStreaming:true });
+      localScreenStream.getVideoTracks()[0].onended = () => toggleStream();
+    } catch(e){ alert('Erro ao selecionar tela: ' + e.message); }
+  } else {
+    localScreenStream.getTracks().forEach(t=>t.stop());
+    localScreenStream = null;
+    video.style.display = 'none';
+    emptyState.style.display = 'block';
+    document.getElementById('btnStream').innerHTML = '📡 Tela';
+    updateDiag('Pronto', '#94a3b8');
+    socket.emit('host-status', { roomId, isStreaming:false });
+    for (let id in screenPeers) screenPeers[id].close();
+    screenPeers = {};
+  }
+}
+
+// Host recebe aviso de espectador pronto para receber vídeo
+socket.on('viewer-ready', async (vid) => {
+  if (!localScreenStream) return;
+  if (screenPeers[vid]) screenPeers[vid].close();
+  
+  const pc = new RTCPeerConnection(iceConfig);
+  screenPeers[vid] = pc;
+  
+  localScreenStream.getTracks().forEach(t => pc.addTrack(t, localScreenStream));
+
+  pc.onicecandidate = (e) => { 
+    if (e.candidate) socket.emit('ice-candidate', { to: vid, candidate: e.candidate }); 
+  };
+
+  const offer = await pc.createOffer({ offerToReceiveVideo: false, offerToReceiveAudio: false });
+  await pc.setLocalDescription(offer);
+  socket.emit('offer', { to: vid, offer });
+});
+
+socket.on('answer', async ({ from, answer }) => {
+  if (screenPeers[from]) await screenPeers[from].setRemoteDescription(new RTCSessionDescription(answer));
+});
+
+socket.on('ice-candidate', async ({ from, candidate }) => {
+  const pc = (role === 'host') ? screenPeers[from] : window.viewerScreenPeer;
+  if (pc && pc.remoteDescription) {
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e){}
+  } else {
+    if (!iceCandidatesQueue[from]) iceCandidatesQueue[from] = [];
+    iceCandidatesQueue[from].push(candidate);
+  }
+});
+
+// ======================== ESPECTADOR (RECEBE VÍDEO SEM TELA PRETA) ========================
+socket.on('offer', async ({ from, offer }) => {
+  updateDiag('Conectando vídeo...', '#fbbf24');
+  if (window.viewerScreenPeer) window.viewerScreenPeer.close();
+  
+  const pc = new RTCPeerConnection(iceConfig);
+  window.viewerScreenPeer = pc;
+
+  pc.ontrack = (e) => {
+    updateDiag('Vídeo Ativo', '#34d399');
+    
+    // Força anexar o stream ou criar um MediaStream novo se vier separado
+    if (e.streams && e.streams[0]) {
+      video.srcObject = e.streams[0];
+    } else {
+      if (!video.srcObject) video.srcObject = new MediaStream();
+      video.srcObject.addTrack(e.track);
+    }
+
+    video.style.display = 'block';
+    emptyState.style.display = 'none';
+
+    video.play().catch(() => {
+      video.muted = true;
+      video.play();
+    });
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+      updateDiag('P2P Conectado', '#34d399');
+    } else if (pc.iceConnectionState === 'failed') {
+      updateDiag('Tentando Relay...', '#f87171');
+      pc.restartIce();
+    }
+  };
+
+  pc.onicecandidate = (e) => { 
+    if (e.candidate) socket.emit('ice-candidate', { to: from, candidate: e.candidate }); 
+  };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+  if (iceCandidatesQueue[from]) {
+    for (const cand of iceCandidatesQueue[from]) {
+      await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{});
+    }
+    delete iceCandidatesQueue[from];
+  }
+
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  socket.emit('answer', { to: from, answer });
+});
+
+socket.on('stream-started', () => {
+  if (role !== 'host') {
+    socket.emit('request-stream', { roomId });
+  }
+});
+
+socket.on('host-disconnected', () => {
+  video.style.display = 'none';
+  emptyState.style.display = 'block';
+  updateDiag('Host Offline', '#94a3b8');
+});
+
+// CONTROLES DE VOLUME & FULLSCREEN
+function setVolume(v) { video.volume = v/100; video.muted = (v == 0); document.getElementById('btnVol').textContent = (v == 0)?'🔇':'🔊'; }
+function toggleMuteStream() { video.muted = !video.muted; document.getElementById('btnVol').textContent = video.muted?'🔇':'🔊'; }
+function toggleFullscreen() { if (!document.fullscreenElement) document.getElementById('stageContainer').requestFullscreen(); else document.exitFullscreen(); }
+
+// CHAT & UI
+function toggleChat() { document.getElementById('chatPanel').classList.toggle('open'); }
+function sendChat() {
+  const i = document.getElementById('chatInput');
+  if (!i.value.trim()) return;
+  socket.emit('chat-msg', { roomId, text: i.value.trim() });
+  i.value = '';
+}
+socket.on('chat-msg', m => {
+  const d = document.createElement('div');
+  d.innerHTML = `<strong>${m.user}:</strong> ${m.text}`;
+  document.getElementById('chatMessages').appendChild(d);
+});
+socket.on('room-update', d => {
+  document.getElementById('viewerCount').textContent = d.viewers;
+  if (role !== 'host' && d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
+    socket.emit('request-stream', { roomId });
+  }
+});
+
+function copyLink() { navigator.clipboard.writeText(location.origin + '/room/' + roomId + '?role=viewer').then(()=>showToast('📋 Link copiado!')); }
+</script>
+</body>
+</html>

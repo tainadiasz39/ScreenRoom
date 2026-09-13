@@ -1,0 +1,49 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScreenRoom</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
+body { background:#080a11; color:#f1f5f9; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+.card { background:rgba(17,24,39,0.8); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:35px 25px; text-align:center; width:100%; max-width:400px; }
+h1 { font-size:1.8rem; font-weight:800; margin-bottom:8px; }
+p { color:#94a3b8; font-size:0.9rem; margin-bottom:25px; }
+.btn { width:100%; padding:15px; border-radius:14px; border:none; font-size:1rem; font-weight:700; cursor:pointer; margin-bottom:10px; }
+.btn-p { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; }
+.btn-s { background:rgba(255,255,255,0.08); color:#e2e8f0; }
+.input-box { display:none; margin-top:15px; flex-direction:column; gap:8px; }
+.input-box.active { display:flex; }
+input { padding:14px; border-radius:12px; border:1px solid rgba(255,255,255,0.15); background:#0f172a; color:#fff; font-size:0.95rem; outline:none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div style="font-size:3rem; margin-bottom:10px;">✨</div>
+  <h1>Screen Room</h1>
+  <p>Transmissao 60 FPS + Call de voz estilo Discord</p>
+  <button class="btn btn-p" onclick="createRoom()">🚀 Criar Nova Sala</button>
+  <button class="btn btn-s" onclick="toggleJoin()">🔗 Entrar na Sala</button>
+  <div class="input-box" id="joinBox">
+    <input type="text" id="roomInput" placeholder="Cole o Link ou Codigo...">
+    <button class="btn btn-p" onclick="joinRoom()">Entrar</button>
+  </div>
+</div>
+<script>
+function createRoom(){
+  fetch('/api/create-room',{method:'POST'}).then(r=>r.json()).then(d=>{
+    window.location.href='/room/'+d.roomId+'?role=host';
+  });
+}
+function toggleJoin(){ document.getElementById('joinBox').classList.toggle('active'); }
+function joinRoom(){
+  let v=document.getElementById('roomInput').value.trim();
+  if(!v) return alert('Digite o link ou codigo');
+  if(v.includes('/room/')) v=v.split('/room/')[1].split('?')[0];
+  window.location.href='/room/'+v+'?role=viewer';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,636 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Screen Room</title>
+
+  <link
+    rel="stylesheet"
+    href="/css/style.css"
+  >
+</head>
+
+<body>
+
+<main class="app">
+
+  <!-- ==================================================
+       TELA INICIAL
+  ================================================== -->
+
+  <section
+    id="homeScreen"
+    class="screen active"
+  >
+
+    <div class="home-card">
+
+      <div class="logo">
+        SR
+      </div>
+
+      <div class="eyebrow">
+        SCREEN ROOM
+      </div>
+
+      <h1>
+        Sua sala. Sua tela.
+      </h1>
+
+      <p>
+        Crie uma sala e compartilhe sua tela
+        com outras pessoas através de um link.
+      </p>
+
+      <div class="home-actions">
+
+        <button
+          id="createRoomButton"
+          class="primary-button"
+        >
+          <span>＋</span>
+          Criar sala
+        </button>
+
+        <button
+          id="joinRoomButton"
+          class="secondary-button"
+        >
+          <span>↗</span>
+          Entrar em uma sala
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==================================================
+       SALA
+  ================================================== -->
+
+  <section
+    id="roomScreen"
+    class="screen"
+  >
+
+    <header class="topbar">
+
+      <div class="brand">
+
+        <div class="brand-logo">
+          SR
+        </div>
+
+        <div>
+
+          <strong>
+            Screen Room
+          </strong>
+
+          <small>
+            Minha sala
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="room-status">
+
+        <span class="live-dot"></span>
+
+        SALA ATIVA
+
+      </div>
+
+    </header>
+
+
+    <div class="room-layout">
+
+
+      <!-- ==================================================
+           ÁREA PRINCIPAL
+      ================================================== -->
+
+      <div class="room-main">
+
+
+        <!-- PLAYER -->
+
+        <div
+          id="roomVideoCard"
+          class="room-video-card"
+        >
+
+          <video
+            id="localVideo"
+            autoplay
+            muted
+            playsinline
+          ></video>
+
+
+          <div
+            id="videoPlaceholder"
+            class="video-placeholder"
+          >
+
+            <div class="placeholder-icon">
+              🖥️
+            </div>
+
+            <strong>
+              Você ainda não está transmitindo
+            </strong>
+
+            <span>
+              Clique em "Transmitir tela" para começar.
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <!-- CONTROLES PRINCIPAIS -->
+
+        <div class="room-main-controls">
+
+          <button
+            id="startBroadcastButton"
+            class="primary-button broadcast-button"
+          >
+            🖥️ Transmitir tela
+          </button>
+
+
+          <button
+            id="micButton"
+            class="secondary-button"
+          >
+            🎤 Microfone
+          </button>
+
+
+          <button
+            id="stopStreamButton"
+            class="danger-button"
+          >
+            ⏹ Encerrar transmissão
+          </button>
+
+        </div>
+
+
+      </div>
+
+
+      <!-- ==================================================
+           PAINEL DA SALA
+      ================================================== -->
+
+      <aside class="room-sidebar">
+
+
+        <!-- IDENTIFICAÇÃO DA SALA -->
+
+        <div class="panel">
+
+          <div class="panel-title">
+            Minha sala
+          </div>
+
+          <div class="room-code-box">
+
+            <span>
+              Código da sala
+            </span>
+
+            <strong id="roomCode">
+              Gerando...
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <!-- LINK -->
+
+        <div class="panel">
+
+          <div class="panel-title">
+            Link da sala
+          </div>
+
+          <p class="panel-description">
+            Gere o link e envie para as pessoas
+            que vão assistir.
+          </p>
+
+
+          <button
+            id="generateLinkButton"
+            class="primary-button generate-link-button"
+          >
+            🔗 Gerar link
+          </button>
+
+
+          <div
+            id="shareLinkArea"
+            class="share-link-area hidden"
+          >
+
+            <div class="share-link-box">
+
+              <div
+                id="streamLink"
+                class="stream-link"
+              ></div>
+
+              <button
+                id="copyLinkButton"
+                class="copy-button"
+              >
+                Copiar
+              </button>
+
+            </div>
+
+
+            <div
+              id="copyStatus"
+              class="copy-status"
+            ></div>
+
+          </div>
+
+        </div>
+
+
+        <!-- ESPECTADORES -->
+
+        <div class="panel viewers-panel">
+
+          <div class="panel-title">
+            Espectadores
+          </div>
+
+          <div
+            id="viewerCount"
+            class="viewer-count"
+          >
+            0
+          </div>
+
+          <span>
+            pessoas na transmissão
+          </span>
+
+        </div>
+
+
+        <!-- SAIR -->
+
+        <button
+          id="leaveRoomButton"
+          class="leave-room-button"
+        >
+          ← Sair da sala
+        </button>
+
+
+      </aside>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==================================================
+       ENTRAR EM SALA
+  ================================================== -->
+
+  <section
+    id="joinScreen"
+    class="screen"
+  >
+
+    <header class="topbar">
+
+      <div class="brand">
+
+        <div class="brand-logo">
+          SR
+        </div>
+
+        <div>
+
+          <strong>
+            Screen Room
+          </strong>
+
+          <small>
+            Entrar em uma sala
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <button
+        id="joinBackButton"
+        class="small-button"
+      >
+        Voltar
+      </button>
+
+    </header>
+
+
+    <div class="join-container">
+
+      <div class="join-card">
+
+        <div class="placeholder-icon">
+          ↗
+        </div>
+
+        <div class="eyebrow">
+          SCREEN ROOM
+        </div>
+
+        <h2>
+          Entrar em uma sala
+        </h2>
+
+        <p>
+          Cole o link que você recebeu.
+        </p>
+
+
+        <div class="watch-form">
+
+          <input
+            id="streamUrlInput"
+            type="text"
+            placeholder="Cole o link da sala aqui"
+            autocomplete="off"
+          >
+
+
+          <button
+            id="connectWatchButton"
+            class="primary-button"
+          >
+            Entrar
+          </button>
+
+        </div>
+
+
+        <div
+          id="watchError"
+          class="error-message"
+        ></div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==================================================
+       TELA DO ESPECTADOR
+  ================================================== -->
+
+  <section
+    id="watchScreen"
+    class="screen"
+  >
+
+    <header class="topbar">
+
+      <div class="brand">
+
+        <div class="brand-logo">
+          SR
+        </div>
+
+        <div>
+
+          <strong>
+            Screen Room
+          </strong>
+
+          <small>
+            Assistindo
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="live-status">
+
+        <span class="live-dot"></span>
+
+        AO VIVO
+
+      </div>
+
+    </header>
+
+
+    <div class="watch-container">
+
+
+      <div
+        id="watchVideoArea"
+        class="watch-video-area"
+      >
+
+        <div
+          id="watchPlayer"
+          class="watch-player"
+        >
+
+          <video
+            id="remoteVideo"
+            autoplay
+            playsinline
+          ></video>
+
+
+          <div
+            id="remoteWaiting"
+            class="remote-waiting"
+          >
+            Conectando à transmissão...
+          </div>
+
+
+          <!-- CONTROLES DO ESPECTADOR -->
+
+          <div
+            id="playerControls"
+            class="player-controls"
+          >
+
+            <button
+              id="playPauseButton"
+              class="player-control"
+              title="Reproduzir / pausar"
+            >
+              ▶
+            </button>
+
+
+            <button
+              id="muteButton"
+              class="player-control"
+              title="Ativar ou desativar som"
+            >
+              🔊
+            </button>
+
+
+            <input
+              id="volumeSlider"
+              class="volume-slider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="1"
+              title="Volume"
+            >
+
+
+            <div class="player-spacer"></div>
+
+
+            <button
+              id="fullscreenButton"
+              class="player-control"
+              title="Tela cheia"
+            >
+              ⛶
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <div class="watch-info">
+
+          <div>
+
+            <span class="live-dot"></span>
+
+            AO VIVO
+
+          </div>
+
+
+          <span id="watchStreamId"></span>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==================================================
+       MODAL ESCOLHA DE TELA
+  ================================================== -->
+
+  <div
+    id="sourceModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-card">
+
+
+      <div class="modal-header">
+
+        <div>
+
+          <div class="eyebrow">
+            TRANSMISSÃO
+          </div>
+
+          <h2>
+            Escolha o que transmitir
+          </h2>
+
+          <p class="modal-description">
+            Escolha uma tela ou uma janela.
+          </p>
+
+        </div>
+
+
+        <button
+          id="closeSourceModal"
+          class="modal-close"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div
+        id="sourceList"
+        class="source-list"
+      ></div>
+
+
+      <div class="modal-footer">
+
+        <button
+          id="cancelSourceButton"
+          class="secondary-button"
+        >
+          Cancelar
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+</main>
+
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script src="/js/app.js"></script>
+
+</body>
+
+</html>
