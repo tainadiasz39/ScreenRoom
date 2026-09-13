@@ -9,32 +9,34 @@
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
 body { background:#080a11; color:#f1f5f9; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 .topbar { height:56px; background:rgba(13,17,28,0.95); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
-.main-layout { flex:1; display:flex; overflow:hidden; position:relative; }
-.stage { flex:1; display:flex; align-items:center; justify-content:center; background:#06080e; padding:10px; position:relative; }
-video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:contain; border-radius:12px; background:#000; cursor:pointer; }
+.stage { flex:1; display:flex; align-items:center; justify-content:center; background:#06080e; padding:12px; position:relative; overflow:hidden; }
+video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:contain; border-radius:14px; background:#000; }
 .stage:fullscreen video { max-height:100vh; width:100vw; border-radius:0; }
 
-.diag-bar { display:flex; align-items:center; gap:8px; font-size:0.75rem; background:rgba(255,255,255,0.05); padding:4px 10px; border-radius:8px; }
-.diag-dot { width:8px; height:8px; border-radius:50%; background:#eab308; }
-.diag-dot.green { background:#22c55e; }
-.diag-dot.red { background:#ef4444; }
+.status-badge { display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.06); padding:4px 12px; border-radius:20px; font-weight:700; }
+.dot { width:8px; height:8px; border-radius:50%; background:#eab308; }
+.dot.live { background:#22c55e; box-shadow:0 0 10px #22c55e; }
 
-.unmute-btn {
-  position:absolute; top:20px; left:50%; transform:translateX(-50%);
+.dock-bar { height:68px; background:#0d111c; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 18px; flex-shrink:0; }
+.dbtn { background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.1); padding:9px 16px; border-radius:12px; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s; }
+.dbtn:hover { background:rgba(255,255,255,0.15); transform:translateY(-1px); }
+.dbtn.pri { background:linear-gradient(135deg,#6366f1,#4f46e5); border:none; }
+.dbtn.danger { background:#ef4444; border:none; }
+.vslider { -webkit-appearance:none; width:90px; height:5px; border-radius:5px; background:rgba(255,255,255,0.2); outline:none; cursor:pointer; }
+.vslider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#6366f1; cursor:pointer; }
+.toast { position:fixed; bottom:85px; left:50%; transform:translateX(-50%); background:#1f2937; border:1px solid #6366f1; color:#fff; padding:10px 20px; border-radius:25px; font-size:0.85rem; opacity:0; transition:0.3s; pointer-events:none; z-index:100; }
+.toast.show { opacity:1; }
+
+.unmute-alert {
+  position:absolute; top:20px;
   background:#6366f1; color:#fff; border:none; padding:12px 24px;
   border-radius:30px; font-weight:700; font-size:0.9rem; cursor:pointer;
   box-shadow:0 10px 25px rgba(99,102,241,0.5); z-index:50; display:none;
 }
-
-.dock-bar { height:68px; background:#0d111c; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
-.dbtn { background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.1); padding:8px 14px; border-radius:10px; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
-.dbtn.pri { background:#6366f1; border:none; }
-.dbtn.danger { background:#ef4444; border:none; }
-.vslider { -webkit-appearance:none; width:80px; height:4px; border-radius:4px; background:rgba(255,255,255,0.2); outline:none; cursor:pointer; }
-.vslider::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:#6366f1; cursor:pointer; }
-.toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#1f2937; border:1px solid #6366f1; color:#fff; padding:8px 18px; border-radius:20px; font-size:0.85rem; opacity:0; transition:0.3s; pointer-events:none; z-index:100; }
-.toast.show { opacity:1; }
 </style>
+<!-- Carrega PeerJS Oficial -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
@@ -42,33 +44,31 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
   <div style="display:flex; align-items:center; gap:10px;">
     <button class="dbtn" onclick="location.href='/'">←</button>
     <span id="roomTitle" style="font-weight:700;">Sala</span>
-    <div class="diag-bar">
-      <div class="diag-dot" id="diagDot"></div>
-      <span id="diagText">Conectando...</span>
+    <div class="status-badge">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Conectando...</span>
     </div>
   </div>
-  <span style="font-size:0.85rem; color:#94a3b8;">👥 <span id="viewerCount">0</span> pessoas</span>
+  <span style="font-size:0.85rem; color:#94a3b8;">👥 <span id="viewerCount">0</span> online</span>
 </div>
 
-<div class="main-layout">
-  <div class="stage" id="stageContainer">
-    <button class="unmute-btn" id="unmuteBtn" onclick="forceUnmute()">🔊 Clique para Ativar Áudio</button>
-    
-    <div id="emptyState" style="text-align:center; color:#94a3b8;">
-      <div style="font-size:3.5rem;">🖥️</div>
-      <h3 style="color:#fff; margin:6px 0;" id="emptyTitle">Aguardando Transmissão</h3>
-      <p style="font-size:0.85rem;" id="emptySub">O host ainda não iniciou o compartilhamento.</p>
-    </div>
-    <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
+<div class="stage" id="stageArea">
+  <button class="unmute-alert" id="unmuteBtn" onclick="enableAudio()">🔊 Clique para Ativar o Áudio</button>
+  
+  <div id="emptyState" style="text-align:center; color:#94a3b8;">
+    <div style="font-size:3.5rem;">🖥️</div>
+    <h3 style="color:#fff; margin:6px 0;" id="emptyTitle">Aguardando Transmissão</h3>
+    <p style="font-size:0.85rem;" id="emptySub">O host ainda não iniciou a tela.</p>
   </div>
+  <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
 </div>
 
 <div class="dock-bar">
   <div style="display:flex; gap:8px;">
     <button class="dbtn pri" id="btnStream" onclick="toggleStream()" style="display:none;">📡 Transmitir Tela</button>
   </div>
-  <div style="display:flex; gap:8px; align-items:center;">
-    <button class="dbtn" id="btnVol" onclick="toggleMute()">🔊</button>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button class="dbtn" id="btnMute" onclick="toggleMute()">🔊</button>
     <input type="range" class="vslider" id="volSlider" min="0" max="100" value="100" oninput="setVolume(this.value)">
     <button class="dbtn" onclick="toggleFullscreen()">⛶ Tela Cheia</button>
     <button class="dbtn" onclick="copyLink()">📋 Copiar Link</button>
@@ -77,69 +77,64 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 
 <div class="toast" id="toast"></div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
 const urlParams = new URLSearchParams(window.location.search);
 const role = urlParams.get('role') || 'viewer';
 const roomId = window.location.pathname.split('/room/')[1];
-const myName = (role === 'host') ? 'Host' : 'User_' + Math.floor(Math.random()*100);
 
 document.getElementById('roomTitle').textContent = '#' + roomId;
 const video = document.getElementById('screenVideo');
 const emptyState = document.getElementById('emptyState');
-const diagDot = document.getElementById('diagDot');
-const diagText = document.getElementById('diagText');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
 const unmuteBtn = document.getElementById('unmuteBtn');
 
 let localStream = null;
-let peerConnections = {};
-let iceCandidatesQueue = {};
+let activeCalls = {};
 
-// STUN + TURN SERVERS GLOBAIS COM FALLBACK
-const iceConfig = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelay',
-      credential: 'openrelay'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelay',
-      credential: 'openrelay'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelay',
-      credential: 'openrelay'
-    }
-  ],
-  iceCandidatePoolSize: 10
-};
+// Configuração PeerJS conectada direto no seu servidor do Render
+const peer = new Peer(undefined, {
+  host: location.hostname,
+  port: location.port || (location.protocol === 'https:' ? 443 : 80),
+  path: '/peerjs',
+  secure: location.protocol === 'https:',
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelay', credential: 'openrelay' }
+    ]
+  }
+});
 
-function updateDiag(text, state) {
-  diagText.textContent = text;
-  diagDot.className = 'diag-dot ' + (state === 'ok' ? 'green' : state === 'err' ? 'red' : '');
+peer.on('open', (peerId) => {
+  socket.emit('join-room', { roomId, peerId, isHost: (role === 'host') });
+  if (role === 'host') {
+    document.getElementById('btnStream').style.display = 'inline-flex';
+    document.getElementById('emptyTitle').textContent = 'Você é o Host';
+    document.getElementById('emptySub').textContent = 'Clique em "Transmitir Tela" para compartilhar.';
+    setStatus('Host Pronto', true);
+  } else {
+    setStatus('Aguardando Transmissão', false);
+  }
+});
+
+function setStatus(text, isLive) {
+  statusText.textContent = text;
+  statusDot.className = 'dot ' + (isLive ? 'live' : '');
 }
 
-function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
-
-socket.emit('join-room', { roomId, userName: myName, isHost: (role === 'host') });
-
-if (role === 'host') {
-  document.getElementById('btnStream').style.display = 'inline-flex';
-  document.getElementById('emptyTitle').textContent = 'Você é o Host';
-  document.getElementById('emptySub').textContent = 'Clique no botão "Transmitir Tela" abaixo.';
-  updateDiag('Host Pronto', 'ok');
-} else {
-  updateDiag('Aguardando Host...', '');
+function showToast(m) {
+  const t = document.getElementById('toast');
+  t.textContent = m;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ======================== TRANSMISSÃO DO HOST ========================
+// ======================== HOST: TRANSMISSÃO ========================
 async function toggleStream() {
   if (!localStream) {
     try {
@@ -147,163 +142,121 @@ async function toggleStream() {
         video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: true
       });
+
       video.srcObject = localStream;
       video.muted = true;
       video.style.display = 'block';
       emptyState.style.display = 'none';
+
       document.getElementById('btnStream').className = 'dbtn danger';
       document.getElementById('btnStream').innerHTML = '⏹️ Parar Transmissão';
-      updateDiag('Transmitindo ao Vivo', 'ok');
+      setStatus('Ao Vivo (60 FPS)', true);
 
-      socket.emit('host-status', { roomId, isStreaming: true });
+      socket.emit('host-streaming-started', { roomId, hostPeerId: peer.id });
 
       localStream.getVideoTracks()[0].onended = () => toggleStream();
-    } catch(e) {
-      alert('Erro ao selecionar tela: ' + e.message);
+    } catch (err) {
+      alert('Erro ao capturar tela: ' + err.message);
     }
   } else {
     localStream.getTracks().forEach(t => t.stop());
     localStream = null;
     video.style.display = 'none';
     emptyState.style.display = 'block';
+
     document.getElementById('btnStream').className = 'dbtn pri';
     document.getElementById('btnStream').innerHTML = '📡 Transmitir Tela';
-    updateDiag('Transmissão Parada', '');
-    socket.emit('host-status', { roomId, isStreaming: false });
+    setStatus('Transmissão Parada', false);
 
-    for (let id in peerConnections) peerConnections[id].close();
-    peerConnections = {};
+    for (let id in activeCalls) {
+      activeCalls[id].close();
+    }
+    activeCalls = {};
+
+    socket.emit('host-streaming-stopped', { roomId });
   }
 }
 
-// Host recebe espectador pronto para receber imagem
-socket.on('viewer-ready', async (viewerId) => {
-  if (!localStream) return;
-  if (peerConnections[viewerId]) peerConnections[viewerId].close();
+// Host liga para os espectadores conectados
+socket.on('call-viewer', ({ viewerPeerId }) => {
+  if (!localStream || !viewerPeerId) return;
+  if (activeCalls[viewerPeerId]) activeCalls[viewerPeerId].close();
 
-  const pc = new RTCPeerConnection(iceConfig);
-  peerConnections[viewerId] = pc;
-
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-  pc.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('ice-candidate', { to: viewerId, candidate: e.candidate });
-  };
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  socket.emit('offer', { to: viewerId, offer });
+  const call = peer.call(viewerPeerId, localStream);
+  activeCalls[viewerPeerId] = call;
 });
 
-socket.on('answer', async ({ from, answer }) => {
-  const pc = peerConnections[from];
-  if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
-});
+// ======================== ESPECTADOR: RECEBER VÍDEO ========================
+peer.on('call', (call) => {
+  call.answer(); // Responde automaticamente sem precisar enviar stream de volta
 
-socket.on('ice-candidate', async ({ from, candidate }) => {
-  const pc = (role === 'host') ? peerConnections[from] : window.viewerPeer;
-  if (pc && pc.remoteDescription) {
-    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e){}
-  } else {
-    if (!iceCandidatesQueue[from]) iceCandidatesQueue[from] = [];
-    iceCandidatesQueue[from].push(candidate);
-  }
-});
-
-// ======================== ESPECTADOR (RECEBE TELA) ========================
-socket.on('offer', async ({ from, offer }) => {
-  updateDiag('Conectando Imagem...', '');
-  if (window.viewerPeer) window.viewerPeer.close();
-
-  const pc = new RTCPeerConnection(iceConfig);
-  window.viewerPeer = pc;
-
-  pc.ontrack = (e) => {
-    updateDiag('Ao Vivo', 'ok');
-    if (e.streams && e.streams[0]) {
-      video.srcObject = e.streams[0];
-    } else {
-      if (!video.srcObject) video.srcObject = new MediaStream();
-      video.srcObject.addTrack(e.track);
-    }
+  call.on('stream', (remoteStream) => {
+    video.srcObject = remoteStream;
     video.style.display = 'block';
     emptyState.style.display = 'none';
+    setStatus('Assistindo Ao Vivo', true);
 
     video.play().catch(() => {
       video.muted = true;
       video.play();
       unmuteBtn.style.display = 'block';
     });
-  };
+  });
 
-  pc.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('ice-candidate', { to: from, candidate: e.candidate });
-  };
-
-  await pc.setRemoteDescription(new RTCSessionDescription(offer));
-
-  if (iceCandidatesQueue[from]) {
-    for (const cand of iceCandidatesQueue[from]) {
-      await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{});
-    }
-    delete iceCandidatesQueue[from];
-  }
-
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  socket.emit('answer', { to: from, answer });
-});
-
-socket.on('stream-started', () => {
-  if (role !== 'host') {
-    socket.emit('request-stream', { roomId });
-  }
+  call.on('close', () => {
+    video.style.display = 'none';
+    emptyState.style.display = 'block';
+    setStatus('Transmissão Finalizada', false);
+  });
 });
 
 socket.on('host-disconnected', () => {
   video.style.display = 'none';
   emptyState.style.display = 'block';
-  updateDiag('Host Offline', 'err');
+  setStatus('Host Saiu', false);
 });
 
 socket.on('room-update', (d) => {
   document.getElementById('viewerCount').textContent = d.viewers;
-  if (role !== 'host' && d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
-    socket.emit('request-stream', { roomId });
+  if (role !== 'host' && !d.isStreaming) {
+    video.style.display = 'none';
+    emptyState.style.display = 'block';
+    setStatus('Aguardando Transmissão', false);
   }
 });
 
 // ======================== CONTROLES ========================
-function forceUnmute() {
+function enableAudio() {
   video.muted = false;
   video.volume = 1;
   document.getElementById('volSlider').value = 100;
-  document.getElementById('btnVol').textContent = '🔊';
+  document.getElementById('btnMute').textContent = '🔊';
   unmuteBtn.style.display = 'none';
 }
 
 function setVolume(v) {
   video.volume = v / 100;
   video.muted = (v == 0);
-  document.getElementById('btnVol').textContent = (v == 0) ? '🔇' : '🔊';
+  document.getElementById('btnMute').textContent = (v == 0) ? '🔇' : '🔊';
 }
 
 function toggleMute() {
   video.muted = !video.muted;
-  document.getElementById('btnVol').textContent = video.muted ? '🔇' : '🔊';
+  document.getElementById('btnMute').textContent = video.muted ? '🔇' : '🔊';
 }
 
 function toggleFullscreen() {
-  const container = document.getElementById('stageContainer');
+  const stage = document.getElementById('stageArea');
   if (!document.fullscreenElement) {
-    container.requestFullscreen().catch(()=>{});
+    stage.requestFullscreen().catch(()=>{});
   } else {
     document.exitFullscreen().catch(()=>{});
   }
 }
 
 function copyLink() {
-  navigator.clipboard.writeText(location.origin + '/room/' + roomId + '?role=viewer').then(() => showToast('📋 Link copiado!'));
+  const url = window.location.origin + '/room/' + roomId + '?role=viewer';
+  navigator.clipboard.writeText(url).then(() => showToast('📋 Link copiado!'));
 }
 </script>
 </body>
