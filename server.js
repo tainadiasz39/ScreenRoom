@@ -22,16 +22,18 @@ app.post('/api/create-room', (req, res) => {
     id: roomId,
     hostId: null,
     viewers: new Set(),
-    isStreaming: false,
-    hasAudio: false
+    isStreaming: false
   });
   res.json({ roomId });
 });
 
 io.on('connection', (socket) => {
   socket.on('join-room', ({ roomId, isHost }) => {
-    let room = rooms.get(roomId) || { id: roomId, hostId: null, viewers: new Set(), isStreaming: false, hasAudio: false };
-    rooms.set(roomId, room);
+    let room = rooms.get(roomId);
+    if (!room) {
+      room = { id: roomId, hostId: null, viewers: new Set(), isStreaming: false };
+      rooms.set(roomId, room);
+    }
 
     socket.join(roomId);
     socket.roomId = roomId;
@@ -43,45 +45,64 @@ io.on('connection', (socket) => {
       room.viewers.add(socket.id);
     }
 
+    // Informa a sala sobre o status
     io.to(roomId).emit('room-status', {
       viewers: room.viewers.size + (room.hostId ? 1 : 0),
       isStreaming: room.isStreaming,
-      hasHost: room.hostId !== null,
-      hasAudio: room.hasAudio
+      hasHost: room.hostId !== null
     });
 
+    // Se o host estiver transmitindo, manda ele conectar com esse novo espectador imediatamente
     if (room.isStreaming && room.hostId && !isHost) {
-      io.to(room.hostId).emit('new-viewer-arrived', socket.id);
+      io.to(room.hostId).emit('connect-viewer', { viewerId: socket.id });
     }
   });
 
-  socket.on('stream-state', ({ roomId, isStreaming, hasAudio }) => {
+  socket.on('host-started-stream', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room) {
-      room.isStreaming = isStreaming;
-      room.hasAudio = hasAudio || false;
+      room.isStreaming = true;
+      socket.to(roomId).emit('stream-is-live');
       io.to(roomId).emit('room-status', {
         viewers: room.viewers.size + (room.hostId ? 1 : 0),
-        isStreaming,
-        hasHost: room.hostId !== null,
-        hasAudio: room.hasAudio
+        isStreaming: true,
+        hasHost: true
       });
-      if (isStreaming) {
-        socket.to(roomId).emit('stream-is-live');
-      }
     }
   });
 
-  socket.on('request-stream', ({ roomId }) => {
+  socket.on('host-stopped-stream', ({ roomId }) => {
+    const room = rooms.get(roomId);
+    if (room) {
+      room.isStreaming = false;
+      socket.to(roomId).emit('stream-ended');
+      io.to(roomId).emit('room-status', {
+        viewers: room.viewers.size + (room.hostId ? 1 : 0),
+        isStreaming: false,
+        hasHost: true
+      });
+    }
+  });
+
+  socket.on('viewer-request-stream', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room && room.hostId && room.isStreaming) {
-      io.to(room.hostId).emit('new-viewer-arrived', socket.id);
+      io.to(room.hostId).emit('connect-viewer', { viewerId: socket.id });
     }
   });
 
-  socket.on('webrtc-offer', ({ to, offer }) => io.to(to).emit('webrtc-offer', { from: socket.id, offer }));
-  socket.on('webrtc-answer', ({ to, answer }) => io.to(to).emit('webrtc-answer', { from: socket.id, answer }));
-  socket.on('webrtc-ice', ({ to, candidate }) => io.to(to).emit('webrtc-ice', { from: socket.id, candidate }));
+  // Roteamento WebRTC Direto
+  socket.on('webrtc-offer', ({ to, offer }) => {
+    io.to(to).emit('webrtc-offer', { from: socket.id, offer });
+  });
+
+  socket.on('webrtc-answer', ({ to, answer }) => {
+    io.to(to).emit('webrtc-answer', { from: socket.id, answer });
+  });
+
+  socket.on('webrtc-ice', ({ to, candidate }) => {
+    io.to(to).emit('webrtc-ice', { from: socket.id, candidate });
+  });
 
   socket.on('disconnect', () => {
     const roomId = socket.roomId;
@@ -92,7 +113,6 @@ io.on('connection', (socket) => {
     if (socket.isHost) {
       room.hostId = null;
       room.isStreaming = false;
-      room.hasAudio = false;
       io.to(roomId).emit('host-left');
     } else {
       room.viewers.delete(socket.id);
@@ -101,11 +121,10 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('room-status', {
       viewers: room.viewers.size + (room.hostId ? 1 : 0),
       isStreaming: room.isStreaming,
-      hasHost: room.hostId !== null,
-      hasAudio: room.hasAudio
+      hasHost: room.hostId !== null
     });
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('ScreenRoom rodando na porta ' + PORT));
+server.listen(PORT, () => console.log('ScreenRoom Servidor rodando na porta ' + PORT));
