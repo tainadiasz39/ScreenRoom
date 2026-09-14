@@ -1,13 +1,18 @@
-﻿{
+{
   "name": "screenroom",
   "version": "1.0.0",
-  "main": "server.js",
+  "description": "ScreenRoom - compartilhamento de tela estilo Discord",
+  "main": "main.js",
   "scripts": {
     "start": "node server.js",
-    "server": "node server.js"
+    "server": "node server.js",
+    "app": "electron main.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "electron": "^34.5.8"
   }
 }
