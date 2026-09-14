@@ -1,413 +1,127 @@
 ﻿<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
->
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ScreenRoom</title>
-
 <style>
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-
-  margin: 0;
-
-  min-height: 100vh;
-
-  background:
-    radial-gradient(
-      circle at top,
-      #25273c 0%,
-      #1e1f22 45%,
-      #111214 100%
-    );
-
-  color: #f2f3f5;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-}
-
-.container {
-
-  width: min(460px, 92vw);
-
-  background: #2b2d31;
-
-  border-radius: 12px;
-
-  padding: 34px;
-
-  box-shadow:
-    0 20px 70px
-    rgba(0,0,0,.45);
-
-}
-
-.logo {
-
-  width: 70px;
-
-  height: 70px;
-
-  border-radius: 18px;
-
-  background: #5865f2;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  font-size: 32px;
-
-  margin: 0 auto 20px;
-
-}
-
-h1 {
-
-  text-align: center;
-
-  margin: 0 0 8px;
-
-  font-size: 28px;
-
-}
-
-.subtitle {
-
-  text-align: center;
-
-  color: #b5bac1;
-
-  margin-bottom: 30px;
-
-  line-height: 1.5;
-
-}
-
-label {
-
-  display: block;
-
-  color: #b5bac1;
-
-  font-size: 12px;
-
-  font-weight: bold;
-
-  margin-bottom: 8px;
-
-  text-transform: uppercase;
-
-}
-
-input {
-
-  width: 100%;
-
-  height: 48px;
-
-  border: 0;
-
-  outline: none;
-
-  border-radius: 5px;
-
-  background: #1e1f22;
-
-  color: white;
-
-  padding: 0 14px;
-
-  font-size: 16px;
-
-  margin-bottom: 12px;
-
-}
-
-button {
-
-  width: 100%;
-
-  height: 48px;
-
-  border: 0;
-
-  border-radius: 5px;
-
-  background: #5865f2;
-
-  color: white;
-
-  font-weight: bold;
-
-  font-size: 15px;
-
-  cursor: pointer;
-
-  margin-top: 8px;
-
-}
-
-button:hover {
-
-  background: #4752c4;
-
-}
-
-.secondary {
-
-  background: #4e5058;
-
-}
-
-.secondary:hover {
-
-  background: #6d6f78;
-
-}
-
-.divider {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 12px;
-
-  margin: 24px 0;
-
-  color: #949ba4;
-
-  font-size: 12px;
-
-}
-
-.divider::before,
-.divider::after {
-
-  content: "";
-
-  height: 1px;
-
-  flex: 1;
-
-  background: #3f4147;
-
-}
-
-.error {
-
-  color: #f23f42;
-
-  font-size: 13px;
-
-  text-align: center;
-
-  margin-top: 12px;
-
-  display: none;
-
-}
-
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#25273c,#111214 70%);color:#f2f3f5;font-family:Arial,sans-serif}
+main{width:min(760px,92vw);margin:42px auto;background:#2b2d31;border-radius:12px;padding:34px;box-shadow:0 20px 70px #0008}
+h1,.subtitle{text-align:center}.subtitle,.muted{color:#b5bac1}
+input,button{border:0;border-radius:5px;padding:13px;font-size:15px}
+input{background:#1e1f22;color:#fff;width:100%;margin:7px 0}
+button{background:#5865f2;color:#fff;font-weight:bold;cursor:pointer}
+button:hover{background:#4752c4}
+.create{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
+.divider{height:1px;background:#3f4147;margin:28px 0}
+.room{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#1e1f22;border-radius:8px;padding:15px;margin:10px 0}
+.room strong{display:block}.live{color:#ff6b6b;font-weight:bold}.empty{text-align:center;color:#b5bac1;padding:25px}
 </style>
-
 </head>
-
 <body>
+<main>
+  <h1>🖥️ ScreenRoom</h1>
+  <p class="subtitle">Crie uma sala ou peça para entrar em uma transmissão.</p>
 
-<div class="container">
+  <h2>Criar sala</h2>
 
-  <div class="logo">
-    🖥️
+  <div class="create">
+    <input id="hostName" maxlength="40" placeholder="Seu nome">
+    <input id="roomName" maxlength="60" placeholder="Nome da sala">
+    <button onclick="createRoom()">Criar sala</button>
   </div>
 
-  <h1>ScreenRoom</h1>
+  <div class="divider"></div>
 
-  <div class="subtitle">
-    Compartilhe sua tela com seus amigos<br>
-    em tempo real.
+  <h2>🔴 Salas disponíveis</h2>
+
+  <div id="rooms" class="empty">
+    Nenhuma sala disponível agora.
   </div>
+</main>
 
-
-  <label>
-    Criar uma sala
-  </label>
-
-  <button
-    onclick="createRoom()"
-  >
-    Criar nova sala
-  </button>
-
-
-  <div class="divider">
-    OU
-  </div>
-
-
-  <label>
-    Entrar em uma sala
-  </label>
-
-  <input
-    id="roomCode"
-    placeholder="Digite o código da sala"
-    maxlength="8"
-    autocomplete="off"
-  >
-
-  <button
-    class="secondary"
-    onclick="joinRoom()"
-  >
-    Entrar na sala
-  </button>
-
-
-  <div
-    class="error"
-    id="error"
-  ></div>
-
-</div>
-
-
+<script src="/socket.io/socket.io.js"></script>
 <script>
+const socket = io();
+const rooms = document.getElementById("rooms");
 
-function showError(message) {
-
-  const error =
-    document.getElementById("error");
-
-  error.textContent =
-    message;
-
-  error.style.display =
-    "block";
-
+function escapeHtml(value) {
+  const element = document.createElement("span");
+  element.textContent = value;
+  return element.innerHTML;
 }
 
+function enterRoom(roomId, role, name, hostKey) {
+  sessionStorage.setItem("screenroomRoom", roomId);
+  sessionStorage.setItem("screenroomRole", role);
+  sessionStorage.setItem("screenroomName", name);
 
-async function createRoom() {
-
-  try {
-
-    const response =
-      await fetch(
-        "/api/create-room",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          }
-        }
-      );
-
-
-    if (!response.ok) {
-
-      throw new Error();
-
-    }
-
-
-    const data =
-      await response.json();
-
-
-    window.location.href =
-      "/room/" +
-      data.roomId +
-      "?role=host";
-
-
-  } catch {
-
-    showError(
-      "Não foi possível criar a sala."
-    );
-
+  if (hostKey) {
+    sessionStorage.setItem("screenroomHostKey", hostKey);
   }
 
+  location.href = "/room";
 }
 
+function createRoom() {
+  const hostName =
+    document.getElementById("hostName").value.trim() || "Host";
 
-function joinRoom() {
+  const name =
+    document.getElementById("roomName").value.trim() || "Sala ao vivo";
 
-  const input =
-    document.getElementById(
-      "roomCode"
-    );
-
-
-  const room =
-    input.value
-      .trim()
-      .toUpperCase();
-
-
-  if (!room) {
-
-    showError(
-      "Digite o código da sala."
-    );
-
-    return;
-
-  }
-
-
-  window.location.href =
-    "/room/" +
-    encodeURIComponent(room) +
-    "?role=viewer";
-
+  socket.emit("create-room", { hostName, name });
 }
 
-
-document
-  .getElementById("roomCode")
-  .addEventListener(
-    "keydown",
-    event => {
-
-      if (
-        event.key === "Enter"
-      ) {
-
-        joinRoom();
-
-      }
-
-    }
+function askToJoin(roomId) {
+  const name = prompt(
+    "Como você quer aparecer para o dono da sala?",
+    "Visitante"
   );
 
-</script>
+  if (name === null) return;
 
+  enterRoom(roomId, "viewer", name.trim() || "Visitante");
+}
+
+socket.on("room-created", ({ roomId, hostKey }) => {
+  const name =
+    document.getElementById("hostName").value.trim() || "Host";
+
+  enterRoom(roomId, "host", name, hostKey);
+});
+
+socket.on("rooms-updated", list => {
+  if (!list.length) {
+    rooms.className = "empty";
+    rooms.textContent = "Nenhuma sala disponível agora.";
+    return;
+  }
+
+  rooms.className = "";
+
+  rooms.innerHTML = list.map(room => `
+    <article class="room">
+      <div>
+        <strong>${escapeHtml(room.name)}</strong>
+        <span class="muted">
+          por ${escapeHtml(room.hostName)} · 👥 ${room.viewers} assistindo
+        </span>
+      </div>
+
+      <div>
+        <span class="${room.isStreaming ? "live" : "muted"}">
+          ${room.isStreaming ? "● AO VIVO" : "Aguardando"}
+        </span>
+
+        <button onclick="askToJoin('${room.id}')">
+          Pedir para entrar
+        </button>
+      </div>
+    </article>
+  `).join("");
+});
+</script>
 </body>
 </html>
