@@ -83,6 +83,31 @@ main{
     grid-row:2 !important;
   }
 }
+</style><style>
+main{
+  display:block !important;
+  width:min(1200px,94vw) !important;
+}
+
+.stage{
+  width:100% !important;
+  min-height:65vh !important;
+}
+
+.sidePanels{
+  width:380px !important;
+  margin:18px 0 0 auto !important;
+  display:block !important;
+}
+
+.sidePanels .panel{
+  width:100% !important;
+  margin:0 0 14px 0 !important;
+}
+
+.chat{
+  height:120px !important;
+}
 </style></head>
 <body>
 <header>
@@ -128,26 +153,6 @@ main{
     <button id="watchButton" class="hidden" onclick="startWatching()">
       ▶ Assistir transmissão
     </button>
-  </section>
-
-  <section class="panel">
-    <h3>💬 Chat da sala</h3>
-
-    <div id="chatMessages" class="chat">
-      <span class="status">Nenhuma mensagem ainda.</span>
-    </div>
-
-    <div class="chatForm">
-      <input
-        id="chatInput"
-        maxlength="500"
-        placeholder="Escreva uma mensagem..."
-      >
-
-      <button onclick="sendChat()">
-        Enviar
-      </button>
-    </div>
   </section></main>
 
 <div id="toast" class="toast"></div>
@@ -586,6 +591,7 @@ async function toggleFullscreen() {
 </script>
 </body>
 </html>
+
 
 
 
