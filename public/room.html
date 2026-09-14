@@ -18,7 +18,11 @@ button{border:0;border-radius:5px;background:#5865f2;color:#fff;padding:11px 14p
 .request{display:flex;align-items:center;gap:8px;background:#1e1f22;padding:10px;border-radius:6px;margin:8px 0}
 .request span{margin-right:auto}.status{color:#b5bac1}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#2b2d31;padding:12px 18px;border-radius:6px;display:none}.toast.show{display:block}
-</style>
+.chat{height:220px;overflow-y:auto;background:#1e1f22;border-radius:7px;padding:10px;margin:10px 0}
+.chatMessage{padding:7px 0;border-bottom:1px solid #33353b;word-break:break-word}
+.chatMessage:last-child{border-bottom:0}.chatName{font-weight:bold;color:#8ea1ff}.chatHost{color:#f6c24b}
+.chatForm{display:flex;gap:8px}.chatForm input{flex:1;border:0;border-radius:5px;background:#1e1f22;color:#fff;padding:11px}
+select{background:#1e1f22;color:#fff;border:0;border-radius:5px;padding:11px;margin:4px}</style>
 </head>
 <body>
 <header>
@@ -38,7 +42,14 @@ button{border:0;border-radius:5px;background:#5865f2;color:#fff;padding:11px 14p
   </section>
 
   <section id="hostControls" class="panel hidden">
-    <button id="streamButton" onclick="toggleStream()">
+    <label class="status">
+  Resolução:
+  <select id="resolution">
+    <option value="720">720p</option>
+    <option value="1080" selected>1080p</option>
+    <option value="1440">1440p</option>
+  </select>
+</label><button id="streamButton" onclick="toggleStream()">
       📡 Transmitir tela
     </button>
 
@@ -58,7 +69,26 @@ button{border:0;border-radius:5px;background:#5865f2;color:#fff;padding:11px 14p
       ▶ Assistir transmissão
     </button>
   </section>
-</main>
+
+  <section class="panel">
+    <h3>💬 Chat da sala</h3>
+
+    <div id="chatMessages" class="chat">
+      <span class="status">Nenhuma mensagem ainda.</span>
+    </div>
+
+    <div class="chatForm">
+      <input
+        id="chatInput"
+        maxlength="500"
+        placeholder="Escreva uma mensagem..."
+      >
+
+      <button onclick="sendChat()">
+        Enviar
+      </button>
+    </div>
+  </section></main>
 
 <div id="toast" class="toast"></div>
 
@@ -83,6 +113,9 @@ const detail = document.getElementById("detail");
 const requests = document.getElementById("requests");
 const watchButton = document.getElementById("watchButton");
 const streamButton = document.getElementById("streamButton");
+const chatMessages = document.getElementById("chatMessages");
+const chatInput = document.getElementById("chatInput");
+const resolution = document.getElementById("resolution");
 
 let localStream = null;
 let viewerPC = null;
@@ -216,8 +249,15 @@ async function toggleStream() {
   }
 
   try {
+    const height = Number(resolution.value);
+    const width = Math.round(height * 16 / 9);
+
     localStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
+      video: {
+        width: { ideal: width },
+        height: { ideal: height },
+        frameRate: { ideal: 60, max: 60 }
+      },
       audio: true
     });
 
@@ -425,6 +465,55 @@ socket.on("host-left", () => {
   }
 });
 
+
+function escapeChat(text) {
+  const element = document.createElement("span");
+  element.textContent = text;
+  return element.textContent;
+}
+
+function sendChat() {
+  const message = chatInput.value.trim();
+
+  if (!message) return;
+
+  socket.emit("chat-message", { message });
+
+  chatInput.value = "";
+  chatInput.focus();
+}
+
+chatInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    sendChat();
+  }
+});
+
+socket.on("chat-message", data => {
+  if (chatMessages.textContent.includes("Nenhuma mensagem")) {
+    chatMessages.textContent = "";
+  }
+
+  const row = document.createElement("div");
+  row.className = "chatMessage";
+
+  const sender = document.createElement("span");
+  sender.className =
+    data.isHost
+      ? "chatName chatHost"
+      : "chatName";
+
+  sender.textContent = data.sender + ": ";
+
+  const message = document.createElement("span");
+  message.textContent = data.message;
+
+  row.append(sender, message);
+  chatMessages.append(row);
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+});
 async function toggleFullscreen() {
   try {
     if (document.fullscreenElement) {
@@ -437,4 +526,5 @@ async function toggleFullscreen() {
 </script>
 </body>
 </html>
+
 

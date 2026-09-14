@@ -127,6 +127,7 @@ io.on("connection", socket => {
       "Visitante";
 
     socketRooms.set(socket.id, roomId);
+    socket.viewerName = name;
     room.pending.set(socket.id, { name });
 
     io.to(room.hostId).emit("access-request", {
@@ -227,6 +228,38 @@ io.on("connection", socket => {
     });
   });
 
+
+  socket.on("chat-message", ({ message } = {}) => {
+    const room = rooms.get(socketRooms.get(socket.id));
+
+    if (
+      !room ||
+      (
+        room.hostId !== socket.id &&
+        !room.viewers.has(socket.id)
+      )
+    ) {
+      return;
+    }
+
+    const text =
+      String(message || "")
+        .trim()
+        .slice(0, 500);
+
+    if (!text) return;
+
+    const sender =
+      room.hostId === socket.id
+        ? room.hostName
+        : (socket.viewerName || "Visitante");
+
+    io.to(room.id).emit("chat-message", {
+      sender,
+      message: text,
+      isHost: room.hostId === socket.id
+    });
+  });
   socket.on("webrtc-offer", ({ to, offer } = {}) => {
     const room = rooms.get(socketRooms.get(socket.id));
 
@@ -313,4 +346,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, "0.0.0.0", () => {
   console.log("ScreenRoom rodando na porta " + PORT);
 });
+
 
