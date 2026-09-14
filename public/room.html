@@ -23,7 +23,22 @@ button{border:0;border-radius:5px;background:#5865f2;color:#fff;padding:11px 14p
 .chatMessage:last-child{border-bottom:0}.chatName{font-weight:bold;color:#8ea1ff}.chatHost{color:#f6c24b}
 .chatForm{display:flex;gap:8px}.chatForm input{flex:1;border:0;border-radius:5px;background:#1e1f22;color:#fff;padding:11px}
 select{background:#1e1f22;color:#fff;border:0;border-radius:5px;padding:11px;margin:4px}</style>
-</head>
+<style>
+.sidePanels{
+  grid-template-columns:minmax(320px, 380px) !important;
+  justify-content:end !important;
+}
+
+.chat{
+  height:120px !important;
+}
+
+@media(max-width:800px){
+  .sidePanels{
+    grid-template-columns:1fr !important;
+  }
+}
+</style></head>
 <body>
 <header>
   <strong id="title">ScreenRoom</strong>
@@ -526,5 +541,6 @@ async function toggleFullscreen() {
 </script>
 </body>
 </html>
+
 
 
