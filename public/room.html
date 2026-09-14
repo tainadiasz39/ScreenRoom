@@ -108,6 +108,59 @@ main{
 .chat{
   height:120px !important;
 }
+</style><style>
+main{
+  display:grid !important;
+  grid-template-columns:minmax(0, 1fr) 380px !important;
+  grid-template-rows:auto auto !important;
+  gap:18px !important;
+  align-items:start !important;
+}
+
+.stage{
+  grid-column:1 !important;
+  grid-row:1 !important;
+  min-height:55vh !important;
+}
+
+#streamControls{
+  grid-column:1 !important;
+  grid-row:2 !important;
+  margin:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  flex-wrap:wrap !important;
+}
+
+.sidePanels{
+  grid-column:2 !important;
+  grid-row:1 / span 2 !important;
+  display:block !important;
+  width:100% !important;
+  margin:0 !important;
+}
+
+.sidePanels .panel{
+  width:100% !important;
+  margin:0 0 14px 0 !important;
+}
+
+.chat{
+  height:130px !important;
+}
+
+@media(max-width:1000px){
+  main{
+    display:block !important;
+  }
+
+  #streamControls,
+  .sidePanels{
+    width:100% !important;
+    margin-top:18px !important;
+  }
+}
 </style></head>
 <body>
 <header>
@@ -127,20 +180,6 @@ main{
   </section>
 
   <section id="hostControls" class="panel hidden">
-    <label class="status">
-  Resolução:
-  <select id="resolution">
-    <option value="720">720p</option>
-    <option value="1080" selected>1080p</option>
-    <option value="1440">1440p</option>
-  </select>
-</label><button id="streamButton" onclick="toggleStream()">
-      📡 Transmitir tela
-    </button>
-
-    <button onclick="toggleFullscreen()">
-      ⛶ Tela cheia
-    </button>
 
     <h3>🔔 Pedidos para entrar</h3>
 
@@ -591,6 +630,7 @@ async function toggleFullscreen() {
 </script>
 </body>
 </html>
+
 
 
 
