@@ -6,122 +6,185 @@
 <title>ScreenRoom</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#25273c,#111214 70%);color:#f2f3f5;font-family:Arial,sans-serif}
-main{width:min(760px,92vw);margin:42px auto;background:#2b2d31;border-radius:12px;padding:34px;box-shadow:0 20px 70px #0008}
-h1,.subtitle{text-align:center}.subtitle,.muted{color:#b5bac1}
-input,button{border:0;border-radius:5px;padding:13px;font-size:15px}
-input{background:#1e1f22;color:#fff;width:100%;margin:7px 0}
-button{background:#5865f2;color:#fff;font-weight:bold;cursor:pointer}
+body{
+  margin:0;min-height:100vh;font-family:Arial,Helvetica,sans-serif;color:#f2f3f5;
+  background:radial-gradient(circle at top,#2b2d42 0%,#1e1f22 45%,#111214 100%);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.card{
+  width:min(720px,100%);background:#2b2d31;border-radius:14px;padding:28px;
+  box-shadow:0 20px 70px rgba(0,0,0,.45);
+}
+.header{text-align:center;margin-bottom:22px}
+.logo{font-size:34px;margin-bottom:8px}
+h1{margin:0 0 8px;font-size:28px}
+.sub{color:#b5bac1;font-size:14px}
+h2{margin:0 0 12px;font-size:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input{
+  flex:1;min-width:160px;height:44px;border:0;border-radius:8px;
+  background:#1e1f22;color:#fff;padding:0 12px;outline:none
+}
+button{
+  height:44px;border:0;border-radius:8px;background:#5865f2;color:#fff;
+  font-weight:bold;padding:0 16px;cursor:pointer
+}
 button:hover{background:#4752c4}
-.create{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
-.divider{height:1px;background:#3f4147;margin:28px 0}
-.room{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#1e1f22;border-radius:8px;padding:15px;margin:10px 0}
-.room strong{display:block}.live{color:#ff6b6b;font-weight:bold}.empty{text-align:center;color:#b5bac1;padding:25px}
+.btn-own{background:#23a55a}
+.btn-own:hover{background:#1e8b4c}
+.btn-wait{background:#4e5058;cursor:default}
+.divider{height:1px;background:#3f4147;margin:22px 0}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{
+  background:#1e1f22;border-radius:10px;padding:14px;display:flex;
+  justify-content:space-between;align-items:center;gap:12px
+}
+.item h3{margin:0 0 4px;font-size:15px}
+.item p{margin:0;color:#b5bac1;font-size:12px}
+.badge{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:4px;font-size:10px;background:#4e5058}
+.badge.live{background:#ed4245}
+.empty{color:#949ba4;text-align:center;padding:18px 0}
+.error{color:#f23f42;text-align:center;margin-top:12px;display:none}
 </style>
 </head>
 <body>
-<main>
-  <h1>🖥️ ScreenRoom</h1>
-  <p class="subtitle">Crie uma sala ou peça para entrar em uma transmissão.</p>
+<div class="card">
+  <div class="header">
+    <div class="logo">🖥️</div>
+    <h1>ScreenRoom</h1>
+    <div class="sub">Crie uma sala ou peça para entrar em uma transmissão.</div>
+  </div>
 
   <h2>Criar sala</h2>
-
-  <div class="create">
-    <input id="hostName" maxlength="40" placeholder="Seu nome">
-    <input id="roomName" maxlength="60" placeholder="Nome da sala">
-    <button onclick="createRoom()">Criar sala</button>
+  <div class="row">
+    <input id="hostName" placeholder="Seu nome" maxlength="24">
+    <input id="roomName" placeholder="Nome da sala" maxlength="40">
+    <button onclick="criarSala()">Criar sala</button>
   </div>
 
   <div class="divider"></div>
 
   <h2>🔴 Salas disponíveis</h2>
+  <div class="list" id="rooms"></div>
+  <div class="error" id="error"></div>
+</div>
 
-  <div id="rooms" class="empty">
-    Nenhuma sala disponível agora.
-  </div>
-</main>
-
-<script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
-const rooms = document.getElementById("rooms");
+const roomsEl = document.getElementById("rooms");
+const errorEl = document.getElementById("error");
 
-function escapeHtml(value) {
-  const element = document.createElement("span");
-  element.textContent = value;
-  return element.innerHTML;
+function showError(msg){
+  errorEl.style.display = "block";
+  errorEl.textContent = msg;
 }
 
-function enterRoom(roomId, role, name, hostKey) {
-  sessionStorage.setItem("screenroomRoom", roomId);
-  sessionStorage.setItem("screenroomRole", role);
-  sessionStorage.setItem("screenroomName", name);
+function escapeHTML(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
 
-  if (hostKey) {
-    sessionStorage.setItem("screenroomHostKey", hostKey);
+function getOwnedRoomIds(){
+  const ids = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("hostKey_")) {
+      ids.push(key.replace("hostKey_", ""));
+    }
   }
-
-  location.href = "/room";
+  return new Set(ids);
 }
 
-function createRoom() {
-  const hostName =
-    document.getElementById("hostName").value.trim() || "Host";
-
-  const name =
-    document.getElementById("roomName").value.trim() || "Sala ao vivo";
-
-  socket.emit("create-room", { hostName, name });
-}
-
-function askToJoin(roomId) {
-  const name = prompt(
-    "Como você quer aparecer para o dono da sala?",
-    "Visitante"
-  );
-
-  if (name === null) return;
-
-  enterRoom(roomId, "viewer", name.trim() || "Visitante");
-}
-
-socket.on("room-created", ({ roomId, hostKey }) => {
-  const name =
-    document.getElementById("hostName").value.trim() || "Host";
-
-  enterRoom(roomId, "host", name, hostKey);
-});
-
-socket.on("rooms-updated", list => {
-  if (!list.length) {
-    rooms.className = "empty";
-    rooms.textContent = "Nenhuma sala disponível agora.";
+async function criarSala(){
+  const hostName = document.getElementById("hostName").value.trim();
+  const roomName = document.getElementById("roomName").value.trim();
+  if(!hostName || !roomName){
+    showError("Preencha seu nome e o nome da sala.");
     return;
   }
 
-  rooms.className = "";
+  try{
+    const res = await fetch("/api/create-room", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ hostName, roomName })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      showError(data.error || "Nao foi possivel criar a sala.");
+      return;
+    }
 
-  rooms.innerHTML = list.map(room => `
-    <article class="room">
-      <div>
-        <strong>${escapeHtml(room.name)}</strong>
-        <span class="muted">
-          por ${escapeHtml(room.hostName)} · 👥 ${room.viewers} assistindo
-        </span>
+    // SALVA A CHAVE DO DONO e vai direto para a sala como HOST
+    localStorage.setItem("hostKey_" + data.roomId, data.hostKey);
+    localStorage.setItem("hostName_" + data.roomId, hostName);
+    window.location.href = "/room/" + data.roomId + "?role=host";
+  }catch(e){
+    showError("Erro de conexao ao criar sala.");
+  }
+}
+
+function entrarComoHost(roomId){
+  const key = localStorage.getItem("hostKey_" + roomId);
+  if(!key){
+    showError("Chave do host nao encontrada neste navegador.");
+    return;
+  }
+  window.location.href = "/room/" + roomId + "?role=host";
+}
+
+function pedirParaEntrar(roomId){
+  const nome = prompt("Escolha seu apelido para entrar:");
+  if(!nome || !nome.trim()) return;
+  window.location.href = "/room/" + roomId + "?role=viewer&name=" + encodeURIComponent(nome.trim());
+}
+
+function renderRooms(salas){
+  const owned = getOwnedRoomIds();
+  if(!salas || salas.length === 0){
+    roomsEl.innerHTML = '<div class="empty">Nenhuma sala disponivel no momento.</div>';
+    return;
+  }
+
+  roomsEl.innerHTML = salas.map(sala => {
+    const isOwner = owned.has(sala.id);
+    const badge = sala.isStreaming
+      ? '<span class="badge live">AO VIVO</span>'
+      : '<span class="badge">Aguardando</span>';
+
+    let actionBtn = "";
+    if (isOwner) {
+      actionBtn = `<button class="btn-own" onclick="entrarComoHost('${sala.id}')">Entrar como host</button>`;
+    } else {
+      actionBtn = `<button onclick="pedirParaEntrar('${sala.id}')">Pedir para entrar</button>`;
+    }
+
+    return `
+      <div class="item">
+        <div>
+          <h3>${escapeHTML(sala.roomName)} ${badge}</h3>
+          <p>por ${escapeHTML(sala.hostName)} · 👥 ${sala.viewerCount} assistindo</p>
+        </div>
+        ${actionBtn}
       </div>
+    `;
+  }).join("");
+}
 
-      <div>
-        <span class="${room.isStreaming ? "live" : "muted"}">
-          ${room.isStreaming ? "● AO VIVO" : "Aguardando"}
-        </span>
+async function carregarSalas(){
+  try{
+    const res = await fetch("/api/rooms");
+    const salas = await res.json();
+    renderRooms(salas);
+  }catch(e){
+    roomsEl.innerHTML = '<div class="empty">Erro ao carregar salas.</div>';
+  }
+}
 
-        <button onclick="askToJoin('${room.id}')">
-          Pedir para entrar
-        </button>
-      </div>
-    </article>
-  `).join("");
-});
+carregarSalas();
+setInterval(carregarSalas, 5000);
 </script>
 </body>
 </html>

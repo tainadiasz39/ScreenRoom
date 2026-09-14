@@ -1,7 +1,7 @@
 ﻿{
   "name": "screenroom",
-  "version": "1.0.0",
-  "description": "ScreenRoom - compartilhamento de tela em tempo real para amigos",
+  "version": "1.2.0",
+  "description": "ScreenRoom - Compartilhamento com Isolamento de Áudio por Aplicativo",
   "main": "main.js",
   "scripts": {
     "start": "node server.js",
@@ -25,6 +25,7 @@
     "productName": "ScreenRoom",
     "files": [
       "main.js",
+      "preload.js",
       "server.js",
       "package.json",
       "public/**/*"

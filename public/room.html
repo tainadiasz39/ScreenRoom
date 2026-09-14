@@ -3,435 +3,719 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ScreenRoom</title>
+<title>ScreenRoom HD</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#111214;color:#f2f3f5;font-family:Arial,sans-serif}
-header{padding:14px 5vw;background:#2b2d31;display:flex;justify-content:space-between;align-items:center}
-main{width:min(1200px,94vw);margin:24px auto}
-.stage{background:#000;border-radius:10px;min-height:55vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
-video{width:100%;max-height:75vh;display:none}video.active{display:block}
-.placeholder{text-align:center;color:#b5bac1;padding:30px}
-.panel{background:#2b2d31;border-radius:10px;padding:18px;margin-top:18px}
-button{border:0;border-radius:5px;background:#5865f2;color:#fff;padding:11px 14px;font-weight:bold;cursor:pointer;margin:4px}
-.danger{background:#da373c}.hidden{display:none}
-.request{display:flex;align-items:center;gap:8px;background:#1e1f22;padding:10px;border-radius:6px;margin:8px 0}
-.request span{margin-right:auto}.status{color:#b5bac1}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#2b2d31;padding:12px 18px;border-radius:6px;display:none}.toast.show{display:block}
+html,body{margin:0;width:100%;height:100%;background:#111214;color:#dbdee1;font-family:Arial,Helvetica,sans-serif}
+body{display:flex;flex-direction:column}
+.top{
+  height:54px;background:#2b2d31;border-bottom:1px solid #1e1f22;
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px
+}
+.top .name{font-weight:bold;color:#fff;display:flex;align-items:center;gap:8px}
+.top .meta{color:#b5bac1;font-size:13px}
+.badge-hd{background:#5865f2;color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px}
+
+.btn{
+  height:36px;border:0;border-radius:8px;background:#5865f2;color:#fff;
+  font-weight:bold;padding:0 12px;cursor:pointer;transition:0.15s
+}
+.btn:hover{background:#4752c4}
+.btn.gray{background:#4e5058}
+.btn.gray:hover{background:#6d6f78}
+.btn.red{background:#da373c}
+.btn.red:hover{background:#b82e33}
+
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:1fr 310px;gap:12px;padding:12px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+.stage{
+  background:#0c0d0e;border-radius:12px;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;min-height:320px
+}
+video{width:100%;height:100%;object-fit:contain;background:#000;display:none}
+video.active{display:block}
+.placeholder{text-align:center;color:#b5bac1;padding:20px}
+.placeholder h2{color:#fff;margin:0 0 8px}
+
+.stats-hud{
+  position:absolute;top:12px;left:12px;background:rgba(17,18,20,0.85);
+  backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px;padding:8px 12px;font-family:monospace;font-size:11px;
+  color:#23a55a;display:none;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.4)
+}
+.stats-hud.show{display:block}
+.stats-hud div{margin-bottom:3px}
+
+.side{display:flex;flex-direction:column;gap:12px}
+.panel{background:#2b2d31;border-radius:12px;padding:12px}
+.panel h3{margin:0 0 10px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padding:0 8px;outline:none}
+
+.requests{max-height:180px;overflow:auto}
+.req{background:#1e1f22;border-radius:8px;padding:10px;margin-bottom:8px}
+.req p{margin:0 0 8px;font-weight:bold;color:#fff}
+.req .actions{display:flex;gap:8px}
+.req button{flex:1;height:30px}
+
+.chat{display:flex;flex-direction:column;min-height:220px;flex:1}
+.chat-log{
+  flex:1;background:#1e1f22;border-radius:8px;padding:10px;overflow:auto;
+  min-height:120px;max-height:260px;font-size:13px
+}
+.chat-line{margin-bottom:6px;word-break:break-word}
+.chat-line .who{color:#5865f2;font-weight:bold}
+.chat-line .who.host{color:#23a55a}
+.chat-line.system{color:#949ba4;font-style:italic}
+.chat-form{display:flex;gap:8px;margin-top:8px}
+.chat-form input{
+  flex:1;height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padding:0 10px;outline:none
+}
+
+.overlay{
+  position:fixed;inset:0;background:rgba(8,8,10,.92);display:none;
+  align-items:center;justify-content:center;z-index:50;padding:16px
+}
+.overlay.show{display:flex}
+.overlay-card{
+  width:min(420px,100%);background:#2b2d31;border-radius:12px;padding:24px;text-align:center
+}
+
+/* MODAL DE SELEÇÃO DE APLICATIVO / JOGO (ESTILO DISCORD) */
+.picker-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;z-index:100;padding:20px
+}
+.picker-modal.show{display:flex}
+.picker-box{
+  background:#2b2d31;border-radius:14px;width:820px;max-width:100%;max-height:85vh;
+  display:flex;flex-direction:column;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.6)
+}
+.picker-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.picker-header h2{margin:0;font-size:20px;color:#fff}
+.picker-grid{
+  display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:16px;
+  overflow-y:auto;padding-right:6px;margin-bottom:20px
+}
+.picker-card{
+  background:#1e1f22;border-radius:10px;padding:10px;cursor:pointer;
+  border:2px solid transparent;transition:0.2s;display:flex;flex-direction:column;gap:8px
+}
+.picker-card:hover{border-color:#5865f2;transform:translateY(-2px);background:#232428}
+.picker-card img{width:100%;height:120px;object-fit:cover;border-radius:6px;background:#000}
+.picker-card span{font-size:13px;font-weight:bold;color:#f2f3f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:#2b2d31;border:1px solid #3f4147;color:#fff;padding:10px 14px;
+  border-radius:8px;opacity:0;transition:.2s;z-index:120;pointer-events:none
+}
+.toast.show{opacity:1}
 </style>
 </head>
 <body>
-<header>
-  <strong id="title">ScreenRoom</strong>
-  <span id="count" class="status">👥 0 assistindo</span>
-  <button onclick="leaveRoom()">Voltar às salas</button>
+
+<header class="top">
+  <div class="name">
+    <span id="roomTitle">Sala</span>
+    <span class="badge-hd">ISOLAMENTO WASAPI AUDIO</span>
+  </div>
+  <div class="meta">👥 <span id="viewerCount">0</span> assistindo</div>
+  <button class="btn gray" onclick="location.href='/'">Voltar às salas</button>
 </header>
 
-<main>
+<main class="layout">
   <section class="stage" id="stage">
-    <video id="video" autoplay playsinline controls></video>
-
-    <div id="placeholder" class="placeholder">
-      <h2 id="message">Conectando...</h2>
-      <p id="detail">Aguarde um momento.</p>
+    <div class="stats-hud" id="statsHud">
+      <div>FPS: <span class="val" id="hudFps">0</span></div>
+      <div>RES: <span class="val" id="hudRes">0x0</span></div>
+      <div>BITRATE: <span class="val" id="hudBitrate">0 kbps</span></div>
+      <div>PING: <span class="val" id="hudPing">0 ms</span></div>
+      <div>PERDA: <span class="val" id="hudLoss">0%</span></div>
     </div>
-  </section>
 
-  <section id="hostControls" class="panel hidden">
-    <button id="streamButton" onclick="toggleStream()">
-      📡 Transmitir tela
-    </button>
-
-    <button onclick="toggleFullscreen()">
-      ⛶ Tela cheia
-    </button>
-
-    <h3>🔔 Pedidos para entrar</h3>
-
-    <div id="requests" class="status">
-      Nenhum pedido pendente.
+    <div class="placeholder" id="placeholder">
+      <h2 id="phTitle">Conectando...</h2>
+      <p id="phText">Aguarde um instante.</p>
     </div>
+    <video id="video" autoplay playsinline></video>
   </section>
 
-  <section id="viewerControls" class="panel hidden">
-    <button id="watchButton" class="hidden" onclick="startWatching()">
-      ▶ Assistir transmissão
-    </button>
-  </section>
+  <aside class="side">
+    <div class="panel" id="hostControls" style="display:none">
+      <h3>Controles do host</h3>
+      <div class="row">
+        <label style="font-size:12px;color:#b5bac1;display:flex;align-items:center;gap:6px">
+          Resolução:
+          <select id="resSelect">
+            <option value="720">720p</option>
+            <option value="1080" selected>1080p (60fps)</option>
+            <option value="1440">1440p 2K</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn" id="streamBtn" onclick="iniciarFluxoTransmissao()">📡 Transmitir tela</button>
+        <button class="btn gray" onclick="toggleHud()">📊 Stats HUD</button>
+        <button class="btn gray" onclick="toggleFullscreen()">⛶ Tela cheia</button>
+      </div>
+    </div>
+
+    <div class="panel" id="requestsPanel" style="display:none">
+      <h3>🔔 Pedidos para entrar</h3>
+      <div class="requests" id="requests">
+        <div style="color:#949ba4;font-size:13px">Nenhum pedido pendente.</div>
+      </div>
+    </div>
+
+    <div class="panel" id="viewerControls" style="display:none">
+      <h3>Controles</h3>
+      <div class="row">
+        <button class="btn gray" onclick="toggleMute()" id="muteBtn">🔊 Mudo</button>
+        <button class="btn gray" onclick="toggleHud()">📊 Stats HUD</button>
+        <button class="btn gray" onclick="toggleFullscreen()">⛶ Tela cheia</button>
+      </div>
+      <input id="volume" type="range" min="0" max="100" value="100" oninput="setVolume(this.value)" style="width:100%">
+    </div>
+
+    <div class="panel chat">
+      <h3>💬 Chat da sala</h3>
+      <div class="chat-log" id="chatLog">
+        <div class="chat-line system">Nenhuma mensagem ainda.</div>
+      </div>
+      <form class="chat-form" onsubmit="return sendChat(event)">
+        <input id="chatInput" placeholder="Escreva uma mensagem..." maxlength="300" disabled>
+        <button class="btn" id="chatBtn" disabled>Enviar</button>
+      </form>
+    </div>
+  </aside>
 </main>
 
-<div id="toast" class="toast"></div>
+<!-- MODAL SELETOR DE APLICATIVO OU TELA -->
+<div class="picker-modal" id="pickerModal">
+  <div class="picker-box">
+    <div class="picker-header">
+      <h2>O que você quer transmitir?</h2>
+      <button class="btn gray" onclick="fecharPicker()">Cancelar</button>
+    </div>
+    <p style="margin:0 0 16px; color:#b5bac1; font-size:13px;">
+      Ao selecionar uma <b>Janela/Jogo específico</b>, o ScreenRoom transmitirá <b>apenas o áudio do jogo</b>, ignorando o WhatsApp e outros sons do seu PC.
+    </p>
+    <div class="picker-grid" id="pickerGrid"></div>
+  </div>
+</div>
+
+<div class="overlay" id="waitOverlay">
+  <div class="overlay-card">
+    <div style="font-size:42px;margin-bottom:10px">⏳</div>
+    <h2>Aguardando aprovação</h2>
+    <p id="waitText">O host recebeu seu pedido.</p>
+    <button class="btn red" onclick="location.href='/'">Voltar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const roomId = sessionStorage.getItem("screenroomRoom");
-const role = sessionStorage.getItem("screenroomRole");
-const name = sessionStorage.getItem("screenroomName") || "Visitante";
-const hostKey = sessionStorage.getItem("screenroomHostKey");
-
-if (!roomId || !role) {
-  location.replace("/");
-}
-
+const socket = io({ transports:["websocket","polling"] });
+const parts = location.pathname.split("/");
+const roomId = decodeURIComponent(parts[parts.length-1]).toUpperCase();
+const params = new URLSearchParams(location.search);
+const role = params.get("role");
+const viewerName = (params.get("name") || "Visitante").trim();
 const isHost = role === "host";
-const socket = io();
 
 const video = document.getElementById("video");
 const placeholder = document.getElementById("placeholder");
-const message = document.getElementById("message");
-const detail = document.getElementById("detail");
-const requests = document.getElementById("requests");
-const watchButton = document.getElementById("watchButton");
-const streamButton = document.getElementById("streamButton");
+const phTitle = document.getElementById("phTitle");
+const phText = document.getElementById("phText");
+const roomTitle = document.getElementById("roomTitle");
+const viewerCount = document.getElementById("viewerCount");
+const hostControls = document.getElementById("hostControls");
+const requestsPanel = document.getElementById("requestsPanel");
+const requestsEl = document.getElementById("requests");
+const viewerControls = document.getElementById("viewerControls");
+const waitOverlay = document.getElementById("waitOverlay");
+const chatLog = document.getElementById("chatLog");
+const chatInput = document.getElementById("chatInput");
+const chatBtn = document.getElementById("chatBtn");
+const streamBtn = document.getElementById("streamBtn");
+const statsHud = document.getElementById("statsHud");
+const pickerModal = document.getElementById("pickerModal");
+const pickerGrid = document.getElementById("pickerGrid");
 
 let localStream = null;
+let viewerConnections = new Map();
 let viewerPC = null;
 let pendingIce = [];
-let streaming = false;
-
-const connections = new Map();
+let chatStarted = false;
+let canChat = false;
+let statsInterval = null;
+let lastBytes = 0;
+let lastTimestamp = Date.now();
 
 const rtcConfig = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "turn:openrelay.metered.ca:80", username: "openrelay", credential: "openrelay" },
+    { urls: "turn:openrelay.metered.ca:443", username: "openrelay", credential: "openrelay" }
+  ]
 };
 
-function showToast(text) {
-  const toast = document.getElementById("toast");
+function optimizeSDPForHD(sdp) {
+  let lines = sdp.split("\r\n");
+  let opusPayload = null;
+  for (let line of lines) {
+    if (line.includes("a=rtpmap:") && line.toLowerCase().includes("opus/48000")) {
+      opusPayload = line.split(" ")[0].split(":")[1];
+      break;
+    }
+  }
+  if (!opusPayload) return sdp;
 
-  toast.textContent = text;
-  toast.classList.add("show");
-
-  setTimeout(() => toast.classList.remove("show"), 3500);
-}
-
-function setMessage(title, text) {
-  message.textContent = title;
-  detail.textContent = text;
-}
-
-function leaveRoom() {
-  sessionStorage.clear();
-  location.href = "/";
-}
-
-if (isHost) {
-  document.getElementById("hostControls").classList.remove("hidden");
-
-  socket.emit("rejoin-host", {
-    roomId,
-    hostKey
+  let fmtpModified = false;
+  lines = lines.map(line => {
+    if (line.startsWith(`a=fmtp:${opusPayload}`)) {
+      fmtpModified = true;
+      return `${line};stereo=1;sprop-stereo=1;maxaveragebitrate=196608;cbr=1;maxplaybackrate=48000`;
+    }
+    return line;
   });
 
-  setMessage(
-    "Você é o host",
-    "Inicie a transmissão quando estiver pronto."
-  );
-} else {
-  document.getElementById("viewerControls").classList.remove("hidden");
+  if (!fmtpModified) {
+    let newLines = [];
+    for (let line of lines) {
+      newLines.push(line);
+      if (line.startsWith(`a=rtpmap:${opusPayload}`)) {
+        newLines.push(`a=fmtp:${opusPayload} stereo=1;sprop-stereo=1;maxaveragebitrate=196608;cbr=1;maxplaybackrate=48000`);
+      }
+    }
+    lines = newLines;
+  }
 
-  socket.emit("request-access", {
-    roomId,
-    viewerName: name
-  });
-
-  setMessage(
-    "Pedido enviado",
-    "Aguarde o dono aceitar você."
-  );
+  return lines.join("\r\n");
 }
 
-socket.on("host-unavailable", leaveRoom);
+function toggleHud() { statsHud.classList.toggle("show"); }
 
-socket.on("access-pending", ({ roomName }) => {
-  document.getElementById("title").textContent = roomName;
-});
+function startStatsMonitoring() {
+  if (statsInterval) clearInterval(statsInterval);
+  statsInterval = setInterval(async () => {
+    let activePC = isHost ? Array.from(viewerConnections.values())[0] : viewerPC;
+    if (!activePC) return;
 
-socket.on("access-approved", ({ roomName, isStreaming }) => {
-  document.getElementById("title").textContent = roomName;
+    try {
+      const stats = await activePC.getStats();
+      let now = Date.now();
+      let timeDelta = (now - lastTimestamp) / 1000;
+      if (timeDelta <= 0) return;
 
-  setMessage(
-    "Pedido aceito",
-    "Você já pode assistir."
-  );
+      stats.forEach(report => {
+        if (report.type === "inbound-rtp" && report.kind === "video") {
+          let bytes = report.bytesReceived || 0;
+          let bitrate = Math.round(((bytes - lastBytes) * 8) / timeDelta / 1000);
+          lastBytes = bytes;
+          document.getElementById("hudBitrate").textContent = `${bitrate} kbps`;
+          document.getElementById("hudFps").textContent = report.framesPerSecond || 0;
+          document.getElementById("hudRes").textContent = `${report.frameWidth || 0}x${report.frameHeight || 0}`;
+        }
+        if (report.type === "outbound-rtp" && report.kind === "video") {
+          let bytes = report.bytesSent || 0;
+          let bitrate = Math.round(((bytes - lastBytes) * 8) / timeDelta / 1000);
+          lastBytes = bytes;
+          document.getElementById("hudBitrate").textContent = `${bitrate} kbps (Envio)`;
+          document.getElementById("hudFps").textContent = report.framesPerSecond || 0;
+          document.getElementById("hudRes").textContent = `${report.frameWidth || 0}x${report.frameHeight || 0}`;
+        }
+        if (report.type === "candidate-pair" && report.state === "succeeded") {
+          let ping = report.currentRoundTripTime ? Math.round(report.currentRoundTripTime * 1000) : 0;
+          document.getElementById("hudPing").textContent = `${ping} ms`;
+        }
+      });
+      lastTimestamp = now;
+    } catch (e) {}
+  }, 1000);
+}
 
-  if (isStreaming) {
-    watchButton.classList.remove("hidden");
-  }
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"), 2500);
+}
 
-  showToast("Você foi aceito na sala!");
-});
+function escapeHTML(str){ return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function enableChat(){ canChat = true; chatInput.disabled = false; chatBtn.disabled = false; }
 
-socket.on("access-rejected", () => {
-  setMessage(
-    "Pedido recusado",
-    "O dono não autorizou sua entrada."
-  );
-});
+function addChat(from, text, isHostMsg){
+  if(!chatStarted){ chatLog.innerHTML = ""; chatStarted = true; }
+  const div = document.createElement("div");
+  div.className = "chat-line";
+  div.innerHTML = `<span class="who ${isHostMsg ? "host":""}">${escapeHTML(from)}:</span> ${escapeHTML(text)}`;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
 
-socket.on("access-unavailable", () => {
-  setMessage(
-    "Sala indisponível",
-    "Esta sala não está mais disponível."
-  );
-});
+function addSystem(text){
+  if(!chatStarted){ chatLog.innerHTML = ""; chatStarted = true; }
+  const div = document.createElement("div");
+  div.className = "chat-line system";
+  div.textContent = text;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
 
-socket.on("access-request", ({ viewerId, viewerName }) => {
-  const row = document.createElement("div");
+function sendChat(e){
+  e.preventDefault();
+  if(!canChat) return false;
+  const text = chatInput.value.trim();
+  if(!text) return false;
+  socket.emit("chat-message", { text });
+  chatInput.value = "";
+  return false;
+}
 
-  row.className = "request";
+function setHostUI(data){
+  roomTitle.textContent = data.roomName || roomId;
+  hostControls.style.display = "block";
+  requestsPanel.style.display = "block";
+  waitOverlay.classList.remove("show");
+  phTitle.textContent = "Voce e o host";
+  phText.textContent = "Inicie a transmissao quando estiver pronto.";
+  enableChat();
+  addSystem("Voce entrou como host.");
+}
 
-  const viewer = document.createElement("span");
-  viewer.textContent = viewerName;
+function setViewerWaiting(data){
+  roomTitle.textContent = (data && data.roomName) || roomId;
+  waitOverlay.classList.add("show");
+  document.getElementById("waitText").textContent =
+    "O host de " + ((data && data.roomName) || "sala") + " recebeu seu pedido.";
+}
 
-  const accept = document.createElement("button");
-  accept.textContent = "Aceitar";
+function setViewerApproved(data){
+  waitOverlay.classList.remove("show");
+  viewerControls.style.display = "block";
+  roomTitle.textContent = data.roomName || roomId;
+  phTitle.textContent = "Aguardando transmissao";
+  phText.textContent = "O host ainda nao compartilhou a tela.";
+  enableChat();
+  addSystem("Voce entrou na sala.");
+  if (data.isStreaming) socket.emit("request-stream");
+}
 
-  accept.onclick = () => {
-    socket.emit("approve-access", { viewerId });
-    row.remove();
-  };
+/* ============================================================
+   SELETOR DISCORD DE JANELAS E JOGOS (ELECTRON WASAPI)
+   ============================================================ */
+async function iniciarFluxoTransmissao() {
+  if (!isHost) return;
 
-  const reject = document.createElement("button");
-  reject.textContent = "Recusar";
-  reject.className = "danger";
-
-  reject.onclick = () => {
-    socket.emit("reject-access", { viewerId });
-    row.remove();
-  };
-
-  row.append(viewer, accept, reject);
-
-  if (requests.textContent.includes("Nenhum")) {
-    requests.textContent = "";
-  }
-
-  requests.append(row);
-});
-
-async function toggleStream() {
   if (localStream) {
-    stopStream();
+    pararTransmissao();
     return;
   }
 
+  // Se estiver rodando dentro do App Electron Native
+  if (window.electronAPI && window.electronAPI.isElectron) {
+    const sources = await window.electronAPI.getSources();
+    pickerGrid.innerHTML = "";
+
+    sources.forEach(src => {
+      const card = document.createElement("div");
+      card.className = "picker-card";
+      card.onclick = () => selecionarETransmitir(src.id, src.name);
+
+      card.innerHTML = `
+        <img src="${src.thumbnail}" />
+        <span>${src.isScreen ? "🖥️ " : "🎮 "} ${escapeHTML(src.name)}</span>
+      `;
+      pickerGrid.appendChild(card);
+    });
+
+    pickerModal.classList.add("show");
+  } else {
+    // Navegador Web Padrão
+    executarCaptura();
+  }
+}
+
+function fecharPicker() {
+  pickerModal.classList.remove("show");
+}
+
+async function selecionarETransmitir(sourceId, sourceName) {
+  fecharPicker();
+  await window.electronAPI.setSource(sourceId);
+  executarCaptura(sourceName);
+}
+
+function resolutionConstraints(){
+  const v = document.getElementById("resSelect").value;
+  if (v === "720") return { width:{ideal:1280,max:1280}, height:{ideal:720,max:720}, frameRate:{ideal:30,max:60} };
+  if (v === "1440") return { width:{ideal:2560,max:2560}, height:{ideal:1440,max:1440}, frameRate:{ideal:30,max:60} };
+  return { width:{ideal:1920,max:1920}, height:{ideal:1080,max:1080}, frameRate:{ideal:60,max:60} };
+}
+
+async function executarCaptura(sourceName = "Tela") {
   try {
     localStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: true
+      video: resolutionConstraints(),
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
     });
 
     video.srcObject = localStream;
+    video.muted = true;
+    video.volume = 0;
     video.classList.add("active");
+
     placeholder.style.display = "none";
-
-    streaming = true;
-
-    streamButton.textContent = "⏹ Parar transmissão";
+    streamBtn.textContent = "⏹ Parar transmissao";
+    streamBtn.classList.add("red");
 
     socket.emit("host-live");
+    toast(`Transmitindo: ${sourceName} (Áudio Isolado WASAPI)`);
+    startStatsMonitoring();
 
-    localStream.getVideoTracks()[0].onended = stopStream;
-
-    showToast("Transmissão iniciada!");
-  } catch {
-    showToast("A transmissão foi cancelada.");
+    localStream.getVideoTracks()[0].onended = () => {
+      if (localStream) pararTransmissao();
+    };
+  } catch (err) {
+    console.error(err);
+    localStream = null;
+    toast("Captura cancelada");
   }
 }
 
-function stopStream() {
-  if (!localStream) return;
-
-  localStream.getTracks().forEach(track => track.stop());
-
-  localStream = null;
-  streaming = false;
-
-  connections.forEach(pc => pc.close());
-  connections.clear();
-
+function pararTransmissao() {
+  if (statsInterval) clearInterval(statsInterval);
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  viewerConnections.forEach(pc => { try{pc.close()}catch{} });
+  viewerConnections.clear();
   video.srcObject = null;
   video.classList.remove("active");
-
   placeholder.style.display = "block";
-
-  setMessage(
-    "Você é o host",
-    "Clique em transmitir para começar."
-  );
-
-  streamButton.textContent = "📡 Transmitir tela";
-
+  phTitle.textContent = "Voce e o host";
+  phText.textContent = "Inicie a transmissao quando estiver pronto.";
+  streamBtn.textContent = "📡 Transmitir tela";
+  streamBtn.classList.remove("red");
   socket.emit("host-stop");
 }
 
-socket.on("viewer-ready", async ({ viewerId }) => {
-  if (!localStream || !streaming) return;
-
-  const pc = new RTCPeerConnection(rtcConfig);
-
-  connections.set(viewerId, pc);
-
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
-  });
-
-  pc.onicecandidate = event => {
-    if (event.candidate) {
-      socket.emit("webrtc-ice", {
-        to: viewerId,
-        candidate: event.candidate
-      });
-    }
-  };
-
-  const offer = await pc.createOffer();
-
-  await pc.setLocalDescription(offer);
-
-  socket.emit("webrtc-offer", {
-    to: viewerId,
-    offer: pc.localDescription
-  });
-});
-
-socket.on("webrtc-answer", async ({ from, answer }) => {
-  const pc = connections.get(from);
-
-  if (pc) {
-    await pc.setRemoteDescription(answer);
+/* ============================================================
+   SINALIZAÇÃO SOCKET
+   ============================================================ */
+if (isHost) {
+  const hostKey = localStorage.getItem("hostKey_" + roomId);
+  if (!hostKey) {
+    alert("Este navegador nao tem a chave de dono desta sala. Crie a sala novamente.");
+    location.href = "/";
+  } else {
+    socket.emit("join-host", { roomId, hostKey });
   }
-});
-
-function startWatching() {
-  watchButton.classList.add("hidden");
-
-  socket.emit("request-stream");
-
-  showToast("Conectando à transmissão...");
+} else {
+  socket.emit("request-entry", { roomId, nickname: viewerName });
 }
 
-socket.on("stream-is-live", () => {
-  if (!isHost) {
-    watchButton.classList.remove("hidden");
+socket.on("join-error", (msg) => { alert(msg || "Nao foi possivel entrar."); location.href = "/"; });
+socket.on("host-ready", (data) => { setHostUI(data); viewerCount.textContent = data.viewers || 0; });
+socket.on("waiting-approval", (data) => setViewerWaiting(data));
+socket.on("entry-approved", (data) => setViewerApproved(data));
+socket.on("entry-rejected", () => { alert("Seu pedido foi recusado."); location.href = "/"; });
+
+socket.on("entry-requested", ({ viewerId, nickname }) => {
+  if (!isHost) return;
+  if (document.getElementById("req_" + viewerId)) return;
+  if (requestsEl.querySelector("div[style]")) requestsEl.innerHTML = "";
+
+  const box = document.createElement("div");
+  box.className = "req";
+  box.id = "req_" + viewerId;
+  box.innerHTML = `
+    <p>${escapeHTML(nickname)}</p>
+    <div class="actions">
+      <button class="btn" onclick="decidir('${viewerId}', true)">Aceitar</button>
+      <button class="btn red" onclick="decidir('${viewerId}', false)">Recusar</button>
+    </div>
+  `;
+  requestsEl.appendChild(box);
+  toast("Pedido: " + nickname);
+});
+
+socket.on("viewer-disconnected", ({ viewerId }) => {
+  const el = document.getElementById("req_" + viewerId);
+  if (el) el.remove();
+  if (!requestsEl.children.length) {
+    requestsEl.innerHTML = '<div style="color:#949ba4;font-size:13px">Nenhum pedido pendente.</div>';
   }
 });
 
-socket.on("stream-stopped", () => {
-  if (isHost) return;
-
-  if (viewerPC) {
-    viewerPC.close();
+function decidir(viewerId, approved){
+  socket.emit("decide-entry", { viewerId, approved });
+  const el = document.getElementById("req_" + viewerId);
+  if (el) el.remove();
+  if (!requestsEl.children.length) {
+    requestsEl.innerHTML = '<div style="color:#949ba4;font-size:13px">Nenhum pedido pendente.</div>';
   }
+}
 
-  viewerPC = null;
+socket.on("viewer-ready", async ({ viewerId }) => {
+  if (!isHost || !localStream) return;
+  try {
+    if (viewerConnections.has(viewerId)) {
+      try { viewerConnections.get(viewerId).close(); } catch {}
+    }
+    const pc = new RTCPeerConnection(rtcConfig);
+    viewerConnections.set(viewerId, pc);
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-  video.srcObject = null;
-  video.classList.remove("active");
+    pc.onicecandidate = (ev) => {
+      if (ev.candidate) socket.emit("webrtc-ice", { to: viewerId, candidate: ev.candidate });
+    };
 
-  placeholder.style.display = "block";
+    const offer = await pc.createOffer();
+    const hdOffer = new RTCSessionDescription({ type: offer.type, sdp: optimizeSDPForHD(offer.sdp) });
 
-  setMessage(
-    "Transmissão encerrada",
-    "O host parou de compartilhar a tela."
-  );
+    await pc.setLocalDescription(hdOffer);
+    socket.emit("webrtc-offer", { to: viewerId, offer: pc.localDescription });
+  } catch (e) {
+    console.error(e);
+  }
 });
 
 socket.on("webrtc-offer", async ({ from, offer }) => {
   if (isHost) return;
-
   try {
-    if (viewerPC) {
-      viewerPC.close();
-    }
-
+    if (viewerPC) viewerPC.close();
     viewerPC = new RTCPeerConnection(rtcConfig);
+    pendingIce = [];
+    const ms = new MediaStream();
+    video.srcObject = ms;
 
-    const media = new MediaStream();
-
-    video.srcObject = media;
-
-    viewerPC.ontrack = async event => {
-      if (!media.getTracks().some(track => track.id === event.track.id)) {
-        media.addTrack(event.track);
-      }
-
+    viewerPC.ontrack = async (ev) => {
+      if (!ms.getTracks().some(t => t.id === ev.track.id)) ms.addTrack(ev.track);
       video.classList.add("active");
       placeholder.style.display = "none";
+      video.muted = false;
+      video.volume = 1.0;
+      startStatsMonitoring();
 
-      await video.play().catch(() => {});
-    };
-
-    viewerPC.onicecandidate = event => {
-      if (event.candidate) {
-        socket.emit("webrtc-ice", {
-          to: from,
-          candidate: event.candidate
-        });
+      try { await video.play(); } catch {
+        video.muted = true;
+        await video.play().catch(()=>{});
+        toast("Clique no Mudo/Volume para liberar audio");
       }
     };
 
-    await viewerPC.setRemoteDescription(offer);
+    viewerPC.onicecandidate = (ev) => {
+      if (ev.candidate) socket.emit("webrtc-ice", { to: from, candidate: ev.candidate });
+    };
 
-    for (const candidate of pendingIce) {
-      await viewerPC.addIceCandidate(candidate).catch(() => {});
+    await viewerPC.setRemoteDescription(new RTCSessionDescription(offer));
+    for (const c of pendingIce) {
+      await viewerPC.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
     }
-
     pendingIce = [];
 
     const answer = await viewerPC.createAnswer();
+    const hdAnswer = new RTCSessionDescription({ type: answer.type, sdp: optimizeSDPForHD(answer.sdp) });
 
-    await viewerPC.setLocalDescription(answer);
-
-    socket.emit("webrtc-answer", {
-      to: from,
-      answer: viewerPC.localDescription
-    });
-  } catch {
-    showToast("Erro ao conectar à transmissão.");
+    await viewerPC.setLocalDescription(hdAnswer);
+    socket.emit("webrtc-answer", { to: from, answer: viewerPC.localDescription });
+  } catch (e) {
+    console.error(e);
+    toast("Erro ao conectar na transmissao");
   }
 });
 
-socket.on("webrtc-ice", async ({ from, candidate }) => {
-  const pc = isHost ? connections.get(from) : viewerPC;
+socket.on("webrtc-answer", async ({ from, answer }) => {
+  if (!isHost) return;
+  const pc = viewerConnections.get(from);
+  if (!pc) return;
+  try { await pc.setRemoteDescription(new RTCSessionDescription(answer)); } catch {}
+});
 
-  if (pc && pc.remoteDescription) {
-    await pc.addIceCandidate(candidate).catch(() => {});
-  } else if (!isHost) {
+socket.on("webrtc-ice", async ({ from, candidate }) => {
+  if (!candidate) return;
+  if (isHost) {
+    const pc = viewerConnections.get(from);
+    if (pc && pc.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(()=>{});
+    return;
+  }
+  if (viewerPC && viewerPC.remoteDescription) {
+    await viewerPC.addIceCandidate(new RTCIceCandidate(candidate)).catch(()=>{});
+  } else {
     pendingIce.push(candidate);
   }
 });
 
-socket.on("room-status", data => {
-  document.getElementById("title").textContent =
-    data.roomName || "ScreenRoom";
+socket.on("stream-is-live", () => {
+  if (isHost) return;
+  phTitle.textContent = "Transmissao ao vivo";
+  phText.textContent = "Conectando...";
+  socket.emit("request-stream");
+});
 
-  document.getElementById("count").textContent =
-    `👥 ${data.viewers} assistindo`;
-
-  if (!isHost && data.isStreaming) {
-    watchButton.classList.remove("hidden");
-  }
+socket.on("stream-stopped", () => {
+  if (isHost) return;
+  if (statsInterval) clearInterval(statsInterval);
+  if (viewerPC) { try{viewerPC.close()}catch{} viewerPC=null; }
+  video.srcObject = null;
+  video.classList.remove("active");
+  placeholder.style.display = "block";
+  phTitle.textContent = "Transmissao encerrada";
+  phText.textContent = "O host parou de compartilhar a tela.";
 });
 
 socket.on("host-left", () => {
-  if (!isHost) {
-    setMessage(
-      "O host saiu",
-      "A transmissão foi encerrada."
-    );
-  }
+  if (isHost) return;
+  if (viewerPC) { try{viewerPC.close()}catch{} viewerPC=null; }
+  video.srcObject = null;
+  video.classList.remove("active");
+  placeholder.style.display = "block";
+  phTitle.textContent = "Host desconectou";
+  phText.textContent = "Aguardando o host voltar...";
 });
 
-async function toggleFullscreen() {
-  try {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    } else {
-      await document.getElementById("stage").requestFullscreen();
-    }
-  } catch {}
+socket.on("room-expired", () => { alert("A sala expirou."); location.href = "/"; });
+socket.on("room-status", (data) => {
+  viewerCount.textContent = data.viewers || 0;
+  if (data.roomName) roomTitle.textContent = data.roomName;
+});
+
+socket.on("chat-message", (msg) => addChat(msg.from, msg.text, !!msg.isHost));
+socket.on("chat-system", (msg) => addSystem(msg.text));
+
+function setVolume(v){
+  video.volume = Number(v)/100;
+  video.muted = Number(v) === 0;
+  document.getElementById("muteBtn").textContent = video.muted ? "🔇 Som" : "🔊 Mudo";
 }
+
+function toggleMute(){
+  video.muted = !video.muted;
+  document.getElementById("muteBtn").textContent = video.muted ? "🔇 Som" : "🔊 Mudo";
+}
+
+async function toggleFullscreen(){
+  try{
+    if (!document.fullscreenElement) await document.getElementById("stage").requestFullscreen();
+    else await document.exitFullscreen();
+  }catch{}
+}
+
+window.addEventListener("beforeunload", () => {
+  if (isHost && localStream) localStream.getTracks().forEach(t => t.stop());
+});
 </script>
 </body>
 </html>
