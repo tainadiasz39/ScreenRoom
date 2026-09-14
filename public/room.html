@@ -47,7 +47,6 @@ video.active{display:block}
 .stats-hud.show{display:block}
 .stats-hud div{margin-bottom:3px}
 .stats-hud .val{color:#fff;font-weight:bold}
-.stats-hud .alert{color:#f23f42}
 
 .side{display:flex;flex-direction:column;gap:12px}
 .panel{background:#2b2d31;border-radius:12px;padding:12px}
@@ -96,7 +95,7 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
 <header class="top">
   <div class="name">
     <span id="roomTitle">Sala</span>
-    <span class="badge-hd">STUN/TURN FALLBACK ATIVO</span>
+    <span class="badge-hd">ÁUDIO AUTOMÁTICO ATIVO</span>
   </div>
   <div class="meta">👥 <span id="viewerCount">0</span> assistindo</div>
   <button class="btn gray" onclick="location.href='/'">Voltar às salas</button>
@@ -110,7 +109,6 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
       <div>BITRATE: <span class="val" id="hudBitrate">0 kbps</span></div>
       <div>PING: <span class="val" id="hudPing">0 ms</span></div>
       <div>PERDA: <span class="val" id="hudLoss">0%</span></div>
-      <div>MODO: <span class="val" id="hudType">Direct P2P</span></div>
     </div>
 
     <div class="placeholder" id="placeholder">
@@ -218,62 +216,35 @@ let statsInterval = null;
 let lastBytes = 0;
 let lastTimestamp = Date.now();
 
-/* ============================================================
-   INFRAESTRUTURA DE REDE - STUN/TURN COM FALLBACK DUPLO
-   ============================================================ */
 const rtcConfig = {
   iceServers: [
-    // Pool de Servidores STUN Multi-Região (Mapeamento de IP Público)
     { urls: [
         "stun:stun.l.google.com:19302",
         "stun:stun1.l.google.com:19302",
-        "stun:stun2.l.google.com:19302",
-        "stun:stun3.l.google.com:19302",
-        "stun:stun4.l.google.com:19302"
+        "stun:stun2.l.google.com:19302"
       ] 
     },
     { urls: "stun:stun.cloudflare.com:3478" },
-    { urls: "stun:stun.services.mozilla.com" },
-
-    // Servidores TURN Relay (Garantia de tráfego por HTTPS/TCP se P2P for bloqueado)
     {
       urls: [
         "turn:openrelay.metered.ca:80",
-        "turn:openrelay.metered.ca:443",
-        "turn:openrelay.metered.ca:443?transport=tcp"
-      ],
-      username: "openrelay",
-      credential: "openrelay"
-    },
-    {
-      urls: [
-        "turns:openrelay.metered.ca:443?transport=tcp",
-        "turns:openrelay.metered.ca:8443"
+        "turn:openrelay.metered.ca:443"
       ],
       username: "openrelay",
       credential: "openrelay"
     }
-  ],
-  iceTransportPolicy: "all",
-  iceCandidatePoolSize: 10,
-  bundlePolicy: "max-bundle",
-  rtcpMuxPolicy: "require"
+  ]
 };
 
-/* ============================================================
-   ENGINE WEBRTC: INJEÇÃO DE SDP OPUS HD STEREO 192KBPS
-   ============================================================ */
 function optimizeSDPForHD(sdp) {
   let lines = sdp.split("\r\n");
   let opusPayload = null;
-
   for (let line of lines) {
     if (line.includes("a=rtpmap:") && line.toLowerCase().includes("opus/48000")) {
       opusPayload = line.split(" ")[0].split(":")[1];
       break;
     }
   }
-
   if (!opusPayload) return sdp;
 
   let fmtpModified = false;
@@ -295,20 +266,13 @@ function optimizeSDPForHD(sdp) {
     }
     lines = newLines;
   }
-
   return lines.join("\r\n");
 }
 
-/* ============================================================
-   SISTEMA DE TELEMETRIA E DIAGNÓSTICO (HUD)
-   ============================================================ */
-function toggleHud() {
-  statsHud.classList.toggle("show");
-}
+function toggleHud() { statsHud.classList.toggle("show"); }
 
 function startStatsMonitoring() {
   if (statsInterval) clearInterval(statsInterval);
-
   statsInterval = setInterval(async () => {
     let activePC = isHost ? Array.from(viewerConnections.values())[0] : viewerPC;
     if (!activePC) return;
@@ -324,52 +288,28 @@ function startStatsMonitoring() {
           let bytes = report.bytesReceived || 0;
           let bitrate = Math.round(((bytes - lastBytes) * 8) / timeDelta / 1000);
           lastBytes = bytes;
-
           document.getElementById("hudBitrate").textContent = `${bitrate} kbps`;
           document.getElementById("hudFps").textContent = report.framesPerSecond || 0;
           document.getElementById("hudRes").textContent = `${report.frameWidth || 0}x${report.frameHeight || 0}`;
-
-          let lost = report.packetsLost || 0;
-          let total = report.packetsReceived || 1;
-          let lossPct = ((lost / (total + lost)) * 100).toFixed(1);
-          const lossEl = document.getElementById("hudLoss");
-          lossEl.textContent = `${lossPct}%`;
-          if (lossPct > 3) lossEl.className = "val alert";
-          else lossEl.className = "val";
         }
-
         if (report.type === "outbound-rtp" && report.kind === "video") {
           let bytes = report.bytesSent || 0;
           let bitrate = Math.round(((bytes - lastBytes) * 8) / timeDelta / 1000);
           lastBytes = bytes;
-
           document.getElementById("hudBitrate").textContent = `${bitrate} kbps (Envio)`;
           document.getElementById("hudFps").textContent = report.framesPerSecond || 0;
           document.getElementById("hudRes").textContent = `${report.frameWidth || 0}x${report.frameHeight || 0}`;
         }
-
         if (report.type === "candidate-pair" && report.state === "succeeded") {
           let ping = report.currentRoundTripTime ? Math.round(report.currentRoundTripTime * 1000) : 0;
-          const pingEl = document.getElementById("hudPing");
-          pingEl.textContent = `${ping} ms`;
-          if (ping > 150) pingEl.className = "val alert";
-          else pingEl.className = "val";
-
-          const hudType = document.getElementById("hudType");
-          if (report.localCandidateId && report.remoteCandidateId) {
-            hudType.textContent = "Conexão Ativa (HD)";
-          }
+          document.getElementById("hudPing").textContent = `${ping} ms`;
         }
       });
-
       lastTimestamp = now;
     } catch (e) {}
   }, 1000);
 }
 
-/* ============================================================
-   INTERFACE & UTILS
-   ============================================================ */
 function toast(msg){
   const el = document.getElementById("toast");
   el.textContent = msg;
@@ -377,15 +317,8 @@ function toast(msg){
   setTimeout(()=>el.classList.remove("show"), 2500);
 }
 
-function escapeHTML(str){
-  return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-}
-
-function enableChat(){
-  canChat = true;
-  chatInput.disabled = false;
-  chatBtn.disabled = false;
-}
+function escapeHTML(str){ return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function enableChat(){ canChat = true; chatInput.disabled = false; chatBtn.disabled = false; }
 
 function addChat(from, text, isHostMsg){
   if(!chatStarted){ chatLog.innerHTML = ""; chatStarted = true; }
@@ -444,8 +377,82 @@ function setViewerApproved(data){
   if (data.isStreaming) socket.emit("request-stream");
 }
 
+function resolutionConstraints(){
+  const v = document.getElementById("resSelect").value;
+  if (v === "720") return { width:{ideal:1280,max:1280}, height:{ideal:720,max:720}, frameRate:{ideal:30,max:60} };
+  if (v === "1440") return { width:{ideal:2560,max:2560}, height:{ideal:1440,max:1440}, frameRate:{ideal:30,max:60} };
+  return { width:{ideal:1920,max:1920}, height:{ideal:1080,max:1080}, frameRate:{ideal:60,max:60} };
+}
+
 /* ============================================================
-   CONEXÃO INITIAL SOCKET
+   SOLICITAÇÃO DE TELA COM ÁUDIO AUTOMÁTICO FORÇADO (systemAudio: include)
+   ============================================================ */
+async function toggleStream(){
+  if (!isHost) return;
+
+  if (!localStream) {
+    try {
+      localStream = await navigator.mediaDevices.getDisplayMedia({
+        video: resolutionConstraints(),
+        audio: {
+          systemAudio: "include",          // FORÇA O CHROME A MARCAR A CAIXA DE ÁUDIO POR PADRÃO
+          surfaceSwitching: "include",     // PERMITE MUDAR DE JANELA COM ÁUDIO
+          selfBrowserSurface: "include",
+          suppressLocalAudioPlayback: true,// EVITA QUE O HOST OUÇA O PRÓPRIO SOM
+          echoCancellation: false,         // ÁUDIO LIMPO DE JOGO/MÚSICA
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+
+      video.srcObject = localStream;
+      video.muted = true;
+      video.volume = 0;
+      video.classList.add("active");
+
+      placeholder.style.display = "none";
+      streamBtn.textContent = "⏹ Parar transmissao";
+      streamBtn.classList.add("red");
+
+      socket.emit("host-live");
+      
+      const hasAudio = localStream.getAudioTracks().length > 0;
+      if (hasAudio) {
+        toast("Transmissão iniciada com ÁUDIO AUTOMÁTICO!");
+      } else {
+        toast("Transmissão iniciada!");
+      }
+
+      startStatsMonitoring();
+
+      localStream.getVideoTracks()[0].onended = () => {
+        if (localStream) toggleStream();
+      };
+    } catch (err) {
+      console.error(err);
+      localStream = null;
+      toast("Captura cancelada");
+    }
+    return;
+  }
+
+  if (statsInterval) clearInterval(statsInterval);
+  localStream.getTracks().forEach(t => t.stop());
+  localStream = null;
+  viewerConnections.forEach(pc => { try{pc.close()}catch{} });
+  viewerConnections.clear();
+  video.srcObject = null;
+  video.classList.remove("active");
+  placeholder.style.display = "block";
+  phTitle.textContent = "Voce e o host";
+  phText.textContent = "Inicie a transmissao quando estiver pronto.";
+  streamBtn.textContent = "📡 Transmitir tela";
+  streamBtn.classList.remove("red");
+  socket.emit("host-stop");
+}
+
+/* ============================================================
+   SINALIZAÇÃO SOCKET E WEBRTC
    ============================================================ */
 if (isHost) {
   const hostKey = localStorage.getItem("hostKey_" + roomId);
@@ -501,72 +508,6 @@ function decidir(viewerId, approved){
   }
 }
 
-function resolutionConstraints(){
-  const v = document.getElementById("resSelect").value;
-  if (v === "720") return { width:{ideal:1280,max:1280}, height:{ideal:720,max:720}, frameRate:{ideal:30,max:60} };
-  if (v === "1440") return { width:{ideal:2560,max:2560}, height:{ideal:1440,max:1440}, frameRate:{ideal:30,max:60} };
-  return { width:{ideal:1920,max:1920}, height:{ideal:1080,max:1080}, frameRate:{ideal:60,max:60} };
-}
-
-/* ============================================================
-   HOST - TRANSMISSÃO
-   ============================================================ */
-async function toggleStream(){
-  if (!isHost) return;
-
-  if (!localStream) {
-    try {
-      localStream = await navigator.mediaDevices.getDisplayMedia({
-        video: resolutionConstraints(),
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
-      });
-
-      video.srcObject = localStream;
-      video.muted = true;
-      video.volume = 0;
-      video.classList.add("active");
-
-      placeholder.style.display = "none";
-      streamBtn.textContent = "⏹ Parar transmissao";
-      streamBtn.classList.add("red");
-
-      socket.emit("host-live");
-      toast("Transmissao iniciada (Opus HD 192k / STUN-TURN)");
-      startStatsMonitoring();
-
-      localStream.getVideoTracks()[0].onended = () => {
-        if (localStream) toggleStream();
-      };
-    } catch (err) {
-      console.error(err);
-      localStream = null;
-      toast("Captura cancelada");
-    }
-    return;
-  }
-
-  if (statsInterval) clearInterval(statsInterval);
-  localStream.getTracks().forEach(t => t.stop());
-  localStream = null;
-  viewerConnections.forEach(pc => { try{pc.close()}catch{} });
-  viewerConnections.clear();
-  video.srcObject = null;
-  video.classList.remove("active");
-  placeholder.style.display = "block";
-  phTitle.textContent = "Voce e o host";
-  phText.textContent = "Inicie a transmissao quando estiver pronto.";
-  streamBtn.textContent = "📡 Transmitir tela";
-  streamBtn.classList.remove("red");
-  socket.emit("host-stop");
-}
-
-/* ============================================================
-   WEBRTC SINALIZAÇÃO + HD SDP TRANSFORM + ICE RESILIENCE
-   ============================================================ */
 socket.on("viewer-ready", async ({ viewerId }) => {
   if (!isHost || !localStream) return;
   try {
@@ -581,17 +522,8 @@ socket.on("viewer-ready", async ({ viewerId }) => {
       if (ev.candidate) socket.emit("webrtc-ice", { to: viewerId, candidate: ev.candidate });
     };
 
-    pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") {
-        console.log("Host: Conexão instável com viewer", viewerId);
-      }
-    };
-
     const offer = await pc.createOffer();
-    const hdOffer = new RTCSessionDescription({
-      type: offer.type,
-      sdp: optimizeSDPForHD(offer.sdp)
-    });
+    const hdOffer = new RTCSessionDescription({ type: offer.type, sdp: optimizeSDPForHD(offer.sdp) });
 
     await pc.setLocalDescription(hdOffer);
     socket.emit("webrtc-offer", { to: viewerId, offer: pc.localDescription });
@@ -628,13 +560,6 @@ socket.on("webrtc-offer", async ({ from, offer }) => {
       if (ev.candidate) socket.emit("webrtc-ice", { to: from, candidate: ev.candidate });
     };
 
-    viewerPC.oniceconnectionstatechange = () => {
-      if (viewerPC.iceConnectionState === "failed") {
-        toast("Reconectando transmissão...");
-        socket.emit("request-stream");
-      }
-    };
-
     await viewerPC.setRemoteDescription(new RTCSessionDescription(offer));
     for (const c of pendingIce) {
       await viewerPC.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
@@ -642,10 +567,7 @@ socket.on("webrtc-offer", async ({ from, offer }) => {
     pendingIce = [];
 
     const answer = await viewerPC.createAnswer();
-    const hdAnswer = new RTCSessionDescription({
-      type: answer.type,
-      sdp: optimizeSDPForHD(answer.sdp)
-    });
+    const hdAnswer = new RTCSessionDescription({ type: answer.type, sdp: optimizeSDPForHD(answer.sdp) });
 
     await viewerPC.setLocalDescription(hdAnswer);
     socket.emit("webrtc-answer", { to: from, answer: viewerPC.localDescription });
