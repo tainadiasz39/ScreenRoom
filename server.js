@@ -18,12 +18,7 @@ app.get('/room/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', '
 
 app.post('/api/create-room', (req, res) => {
   const roomId = crypto.randomBytes(4).toString('hex');
-  rooms.set(roomId, {
-    id: roomId,
-    hostId: null,
-    viewers: new Set(),
-    isStreaming: false
-  });
+  rooms.set(roomId, { id: roomId, hostId: null, viewers: new Set(), isStreaming: false });
   res.json({ roomId });
 });
 
@@ -57,11 +52,7 @@ io.on('connection', (socket) => {
     if (room) {
       room.isStreaming = true;
       io.to(roomId).emit('stream-is-live');
-      io.to(roomId).emit('room-status', {
-        viewers: room.viewers.size + (room.hostId ? 1 : 0),
-        isStreaming: true,
-        hasHost: true
-      });
+      io.to(roomId).emit('room-status', { viewers: room.viewers.size + 1, isStreaming: true, hasHost: true });
     }
   });
 
@@ -70,15 +61,10 @@ io.on('connection', (socket) => {
     if (room) {
       room.isStreaming = false;
       io.to(roomId).emit('stream-ended');
-      io.to(roomId).emit('room-status', {
-        viewers: room.viewers.size + (room.hostId ? 1 : 0),
-        isStreaming: false,
-        hasHost: true
-      });
+      io.to(roomId).emit('room-status', { viewers: room.viewers.size + 1, isStreaming: false, hasHost: true });
     }
   });
 
-  // Espectador clica em "Assistir Transmissão"
   socket.on('viewer-request-stream', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room && room.hostId && room.isStreaming) {
@@ -86,18 +72,9 @@ io.on('connection', (socket) => {
     }
   });
 
-  // WebRTC Signaling
-  socket.on('webrtc-offer', ({ to, offer }) => {
-    io.to(to).emit('webrtc-offer', { from: socket.id, offer });
-  });
-
-  socket.on('webrtc-answer', ({ to, answer }) => {
-    io.to(to).emit('webrtc-answer', { from: socket.id, answer });
-  });
-
-  socket.on('webrtc-ice', ({ to, candidate }) => {
-    io.to(to).emit('webrtc-ice', { from: socket.id, candidate });
-  });
+  socket.on('webrtc-offer', ({ to, offer }) => io.to(to).emit('webrtc-offer', { from: socket.id, offer }));
+  socket.on('webrtc-answer', ({ to, answer }) => io.to(to).emit('webrtc-answer', { from: socket.id, answer }));
+  socket.on('webrtc-ice', ({ to, candidate }) => io.to(to).emit('webrtc-ice', { from: socket.id, candidate }));
 
   socket.on('disconnect', () => {
     const roomId = socket.roomId;
@@ -122,4 +99,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('ScreenRoom Servidor rodando na porta ' + PORT));
+server.listen(PORT, () => console.log('ScreenRoom rodando na porta ' + PORT));

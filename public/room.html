@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ScreenRoom • Live</title>
+<title>ScreenRoom • Live HD</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
@@ -18,21 +18,26 @@ body { background:#080a11; color:#f1f5f9; height:100vh; display:flex; flex-direc
 video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:contain; border-radius:14px; background:#000; box-shadow:0 20px 50px rgba(0,0,0,0.8); }
 .stage:fullscreen video { max-height:100vh; width:100vw; border-radius:0; }
 
-/* BOTÃO GIGANTE DE ASSISTIR PARA QUEM ENTRA */
+.audio-alert {
+  position:absolute; top:20px; left:50%; transform:translateX(-50%);
+  padding:10px 22px; border-radius:30px; font-weight:700; font-size:0.85rem;
+  z-index:60; display:none; box-shadow:0 8px 25px rgba(0,0,0,0.6);
+}
+.audio-alert.green { background:#10b981; color:#fff; }
+.audio-alert.red { background:#ef4444; color:#fff; cursor:pointer; }
+
 .watch-overlay {
-  position:absolute; inset:0; background:rgba(8,10,17,0.85); backdrop-filter:blur(10px);
+  position:absolute; inset:0; background:rgba(8,10,17,0.88); backdrop-filter:blur(10px);
   display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:50;
 }
-.btn-watch-live {
+.btn-watch {
   background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border:none;
   padding:18px 36px; border-radius:18px; font-size:1.15rem; font-weight:800; cursor:pointer;
   box-shadow:0 15px 35px rgba(99,102,241,0.5); display:flex; align-items:center; gap:12px;
   animation:pulseBtn 2s infinite; transition:transform 0.2s;
 }
-.btn-watch-live:hover { transform:scale(1.05); }
+.btn-watch:hover { transform:scale(1.05); }
 @keyframes pulseBtn { 0%,100%{box-shadow:0 15px 35px rgba(99,102,241,0.5);} 50%{box-shadow:0 20px 50px rgba(99,102,241,0.8);} }
-
-.empty-box { text-align:center; color:#94a3b8; }
 
 .dock-bar { height:68px; background:#0d111c; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 18px; flex-shrink:0; }
 .dbtn { background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.1); padding:9px 16px; border-radius:12px; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s; }
@@ -63,26 +68,28 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 </div>
 
 <div class="stage" id="stageArea">
-  <!-- OVERLAY CENTRAL DE ASSISTIR -->
+  <div class="audio-alert" id="audioAlert"></div>
+
   <div class="watch-overlay" id="watchOverlay">
-    <div style="font-size:3rem;">🔴</div>
-    <div style="font-size:1.3rem; font-weight:800; color:#fff;">A transmissão está ao vivo!</div>
-    <p style="color:#94a3b8; font-size:0.9rem;">Clique no botão abaixo para assistir com imagem 60 FPS e áudio.</p>
-    <button class="btn-watch-live" onclick="startWatching()">▶️ Assistir Transmissão</button>
+    <div style="font-size:3rem;">🎮</div>
+    <div style="font-size:1.3rem; font-weight:800; color:#fff;">Transmissão Ao Vivo</div>
+    <p style="color:#94a3b8; font-size:0.9rem;">Clique no botão abaixo para assistir com imagem 60 FPS e som do jogo.</p>
+    <button class="btn-watch" onclick="startWatching()">▶️ Assistir Transmissão</button>
   </div>
 
-  <div class="empty-box" id="emptyState">
+  <div id="emptyState" style="text-align:center; color:#94a3b8;">
     <div style="font-size:3.5rem;">🖥️</div>
     <h3 style="color:#fff; margin:6px 0;" id="emptyTitle">Aguardando Transmissão</h3>
-    <p style="font-size:0.85rem;" id="emptySub">O host ainda não iniciou a tela.</p>
+    <p style="font-size:0.85rem;">O host ainda não iniciou a tela.</p>
   </div>
   <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
+  <audio id="screenAudio" autoplay playsinline style="display:none;"></audio>
 </div>
 
 <div class="dock-bar">
   <div style="display:flex; gap:8px;">
     <button class="dbtn pri" id="btnStream" onclick="toggleStream()" style="display:none;">📡 Transmitir Tela</button>
-    <button class="dbtn watch" id="btnDockWatch" onclick="startWatching()" style="display:none;">📺 Assistir Transmissão</button>
+    <button class="dbtn watch" id="btnDockWatch" onclick="startWatching()" style="display:none;">📺 Assistir</button>
   </div>
   <div style="display:flex; gap:10px; align-items:center;">
     <button class="dbtn" id="btnMute" onclick="toggleMute()">🔊 Som</button>
@@ -103,15 +110,18 @@ const roomId = window.location.pathname.split('/room/')[1].split('?')[0];
 
 document.getElementById('roomTitle').textContent = '#' + roomId;
 const video = document.getElementById('screenVideo');
+const audioEl = document.getElementById('screenAudio');
 const emptyState = document.getElementById('emptyState');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const watchOverlay = document.getElementById('watchOverlay');
 const btnDockWatch = document.getElementById('btnDockWatch');
+const audioAlert = document.getElementById('audioAlert');
 
 let localStream = null;
-let peerConnections = {}; // Host: [viewerId] -> RTCPeerConnection
-let viewerPC = null;     // Viewer: RTCPeerConnection
+let peerConnections = {};
+let viewerPC = null;
+let viewerStream = null;
 let iceQueue = [];
 
 const rtcConfig = {
@@ -119,7 +129,9 @@ const rtcConfig = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' }
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' }
   ],
   iceCandidatePoolSize: 10
 };
@@ -141,20 +153,47 @@ socket.emit('join-room', { roomId, isHost: (role === 'host') });
 if (role === 'host') {
   document.getElementById('btnStream').style.display = 'inline-flex';
   document.getElementById('emptyTitle').textContent = 'Você é o Host';
-  document.getElementById('emptySub').textContent = 'Clique em "Transmitir Tela" abaixo para compartilhar sua gameplay com áudio.';
+  document.getElementById('emptySub').textContent = 'Clique em Transmitir Tela para compartilhar sua gameplay.';
   setStatus('Host Pronto', true);
 } else {
   btnDockWatch.style.display = 'inline-flex';
 }
 
-// ======================== HOST ========================
+function tuneSDPAudio(sdp) {
+  if (sdp.includes('opus/48000')) {
+    sdp = sdp.replace(/a=fmtp:111 .*/g, 'a=fmtp:111 minptime=10;useinbandfec=1;stereo=1;sprop-stereo=1;maxaveragebitrate=256000;cbr=1');
+  }
+  return sdp;
+}
+
+// ==================== HOST ====================
 async function toggleStream() {
   if (!localStream) {
     try {
       localStream = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        audio: {
+          autoGainControl: false,
+          echoCancellation: false,
+          noiseSuppression: false,
+          channelCount: 2,
+          sampleRate: 48000
+        },
+        systemAudio: 'include'
       });
+
+      const audioTracks = localStream.getAudioTracks();
+      if (audioTracks.length > 0) {
+        if ('contentHint' in audioTracks[0]) audioTracks[0].contentHint = 'music';
+        audioAlert.className = 'audio-alert green';
+        audioAlert.textContent = '🔊 ÁUDIO DO JOGO/SISTEMA CAPTURADO COM SUCESSO!';
+        audioAlert.style.display = 'block';
+        setTimeout(() => audioAlert.style.display = 'none', 5000);
+      } else {
+        audioAlert.className = 'audio-alert red';
+        audioAlert.innerHTML = '⚠️ SEM ÁUDIO: Marque "Compartilhar áudio do sistema" ao escolher a tela!';
+        audioAlert.style.display = 'block';
+      }
 
       video.srcObject = localStream;
       video.muted = true;
@@ -167,7 +206,6 @@ async function toggleStream() {
       setStatus('Ao Vivo (60 FPS)', true);
 
       socket.emit('host-started-stream', { roomId });
-
       localStream.getVideoTracks()[0].onended = () => toggleStream();
     } catch (err) {
       showToast('Transmissão cancelada');
@@ -175,6 +213,7 @@ async function toggleStream() {
   } else {
     localStream.getTracks().forEach(t => t.stop());
     localStream = null;
+    audioAlert.style.display = 'none';
     video.style.display = 'none';
     emptyState.style.display = 'block';
 
@@ -184,13 +223,11 @@ async function toggleStream() {
     setStatus('Transmissão Parada', false);
 
     socket.emit('host-stopped-stream', { roomId });
-
     for (let id in peerConnections) peerConnections[id].close();
     peerConnections = {};
   }
 }
 
-// Host recebe o clique de um espectador que quer assistir
 socket.on('connect-viewer', async ({ viewerId }) => {
   if (!localStream) return;
   if (peerConnections[viewerId]) peerConnections[viewerId].close();
@@ -198,13 +235,14 @@ socket.on('connect-viewer', async ({ viewerId }) => {
   const pc = new RTCPeerConnection(rtcConfig);
   peerConnections[viewerId] = pc;
 
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
   pc.onicecandidate = (e) => {
     if (e.candidate) socket.emit('webrtc-ice', { to: viewerId, candidate: e.candidate });
   };
 
-  const offer = await pc.createOffer();
+  let offer = await pc.createOffer();
+  offer.sdp = tuneSDPAudio(offer.sdp);
   await pc.setLocalDescription(offer);
   socket.emit('webrtc-offer', { to: viewerId, offer });
 });
@@ -214,7 +252,7 @@ socket.on('webrtc-answer', async ({ from, answer }) => {
   if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
 });
 
-// ======================== VIEWER ========================
+// ==================== VIEWER ====================
 function startWatching() {
   watchOverlay.style.display = 'none';
   showToast('Conectando à transmissão...');
@@ -225,25 +263,27 @@ socket.on('webrtc-offer', async ({ from, offer }) => {
   if (viewerPC) viewerPC.close();
 
   viewerPC = new RTCPeerConnection(rtcConfig);
+  viewerStream = new MediaStream();
   iceQueue = [];
 
+  video.srcObject = viewerStream;
+  audioEl.srcObject = viewerStream;
+
   viewerPC.ontrack = (event) => {
-    if (event.streams && event.streams[0]) {
-      video.srcObject = event.streams[0];
-    } else {
-      if (!video.srcObject) video.srcObject = new MediaStream();
-      video.srcObject.addTrack(event.track);
-    }
+    viewerStream.addTrack(event.track);
 
     video.style.display = 'block';
     emptyState.style.display = 'none';
     watchOverlay.style.display = 'none';
     setStatus('Ao Vivo', true);
 
-    video.play().catch(() => {
-      video.muted = true;
-      video.play();
-    });
+    video.muted = false;
+    video.volume = 1;
+    audioEl.muted = false;
+    audioEl.volume = 1;
+
+    video.play().catch(()=>{});
+    audioEl.play().catch(()=>{});
   };
 
   viewerPC.onicecandidate = (e) => {
@@ -253,11 +293,12 @@ socket.on('webrtc-offer', async ({ from, offer }) => {
   await viewerPC.setRemoteDescription(new RTCSessionDescription(offer));
 
   for (const cand of iceQueue) {
-    await viewerPC.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+    await viewerPC.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{});
   }
   iceQueue = [];
 
-  const answer = await viewerPC.createAnswer();
+  let answer = await viewerPC.createAnswer();
+  answer.sdp = tuneSDPAudio(answer.sdp);
   await viewerPC.setLocalDescription(answer);
   socket.emit('webrtc-answer', { to: from, answer });
 });
@@ -299,22 +340,23 @@ socket.on('host-left', () => {
 
 socket.on('room-status', (d) => {
   document.getElementById('viewerCount').textContent = d.viewers;
-  if (role !== 'host') {
-    if (d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
-      watchOverlay.style.display = 'flex';
-    }
+  if (role !== 'host' && d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
+    watchOverlay.style.display = 'flex';
   }
 });
 
-// ======================== CONTROLES ========================
 function setVolume(v) {
-  video.volume = v / 100;
+  const vol = v / 100;
+  video.volume = vol;
+  audioEl.volume = vol;
   video.muted = (v == 0);
+  audioEl.muted = (v == 0);
   document.getElementById('btnMute').textContent = (v == 0) ? '🔇 Mudo' : '🔊 Som';
 }
 
 function toggleMute() {
   video.muted = !video.muted;
+  audioEl.muted = video.muted;
   document.getElementById('btnMute').textContent = video.muted ? '🔇 Mudo' : '🔊 Som';
 }
 
