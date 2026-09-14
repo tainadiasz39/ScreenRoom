@@ -222,6 +222,8 @@ async function toggleStream() {
     });
 
     video.srcObject = localStream;
+    video.muted = true;
+    video.volume = 0;
     video.classList.add("active");
     placeholder.style.display = "none";
 
@@ -435,3 +437,4 @@ async function toggleFullscreen() {
 </script>
 </body>
 </html>
+
