@@ -45,24 +45,18 @@ io.on('connection', (socket) => {
       room.viewers.add(socket.id);
     }
 
-    // Informa a sala sobre o status
     io.to(roomId).emit('room-status', {
       viewers: room.viewers.size + (room.hostId ? 1 : 0),
       isStreaming: room.isStreaming,
       hasHost: room.hostId !== null
     });
-
-    // Se o host estiver transmitindo, manda ele conectar com esse novo espectador imediatamente
-    if (room.isStreaming && room.hostId && !isHost) {
-      io.to(room.hostId).emit('connect-viewer', { viewerId: socket.id });
-    }
   });
 
   socket.on('host-started-stream', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room) {
       room.isStreaming = true;
-      socket.to(roomId).emit('stream-is-live');
+      io.to(roomId).emit('stream-is-live');
       io.to(roomId).emit('room-status', {
         viewers: room.viewers.size + (room.hostId ? 1 : 0),
         isStreaming: true,
@@ -75,7 +69,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(roomId);
     if (room) {
       room.isStreaming = false;
-      socket.to(roomId).emit('stream-ended');
+      io.to(roomId).emit('stream-ended');
       io.to(roomId).emit('room-status', {
         viewers: room.viewers.size + (room.hostId ? 1 : 0),
         isStreaming: false,
@@ -84,6 +78,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Espectador clica em "Assistir Transmissão"
   socket.on('viewer-request-stream', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room && room.hostId && room.isStreaming) {
@@ -91,7 +86,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Roteamento WebRTC Direto
+  // WebRTC Signaling
   socket.on('webrtc-offer', ({ to, offer }) => {
     io.to(to).emit('webrtc-offer', { from: socket.id, offer });
   });
