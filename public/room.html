@@ -1,403 +1,2494 @@
 ﻿<!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ScreenRoom • Discord Live</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>ScreenRoom</title>
+
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
-body { background:#1e1f22; color:#dbdee1; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+
+  overflow: hidden;
+
+  background: #111214;
+
+  color: #dbdee1;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+}
+
+body {
+
+  display: flex;
+
+  flex-direction: column;
+
+}
+
+
+/* ==========================================================
+TOPO
+========================================================== */
 
 .topbar {
-  height:48px; background:#2b2d31; border-bottom:1px solid #1f2023;
-  display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0;
+
+  height: 52px;
+
+  flex-shrink: 0;
+
+  background: #2b2d31;
+
+  border-bottom:
+    1px solid #1e1f22;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding: 0 16px;
+
 }
-.topbar-left { display:flex; align-items:center; gap:8px; font-weight:700; color:#fff; font-size:0.95rem; }
-.badge-live {
-  background:#f23f42; color:#fff; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:4px;
-  display:none; align-items:center; gap:4px;
+
+.room-name {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  font-weight: bold;
+
+  color: #fff;
+
 }
-.badge-live.show { display:inline-flex; }
+
+.room-icon {
+
+  color: #949ba4;
+
+}
+
+.live {
+
+  display: none;
+
+  background: #ed4245;
+
+  color: white;
+
+  font-size: 11px;
+
+  font-weight: bold;
+
+  padding: 5px 8px;
+
+  border-radius: 4px;
+
+}
+
+.live.show {
+
+  display: inline-block;
+
+}
+
+.online {
+
+  color: #b5bac1;
+
+  font-size: 13px;
+
+}
+
+
+/* ==========================================================
+PALCO
+========================================================== */
 
 .stage {
-  flex:1; display:flex; align-items:center; justify-content:center; background:#111214;
-  padding:16px; position:relative; overflow:hidden;
+
+  flex: 1;
+
+  min-height: 0;
+
+  position: relative;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background: #111214;
+
+  padding: 12px;
+
 }
+
 video {
-  width:100%; height:100%; max-height:calc(100vh - 140px); object-fit:contain;
-  border-radius:8px; background:#000; box-shadow:0 8px 24px rgba(0,0,0,0.7);
+
+  display: none;
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: contain;
+
+  background: #000;
+
+  border-radius: 8px;
+
 }
-.stage:fullscreen video { max-height:100vh; width:100vw; border-radius:0; }
+
+video.active {
+
+  display: block;
+
+}
 
 .placeholder {
-  display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; max-width:400px;
+
+  text-align: center;
+
+  max-width: 420px;
+
+  padding: 30px;
+
 }
+
 .placeholder-icon {
-  width:72px; height:72px; background:#2b2d31; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2.2rem;
-}
-.placeholder h2 { color:#f2f3f5; font-size:1.2rem; font-weight:700; }
-.placeholder p { color:#949ba4; font-size:0.9rem; line-height:1.4; }
 
-/* OVERLAYS E AVISOS */
-.watch-overlay {
-  position:absolute; inset:0; background:rgba(17,18,20,0.9); backdrop-filter:blur(6px);
-  display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:50;
-}
-.watch-overlay.show { display:flex; }
-.btn-watch-live {
-  background:#5865f2; color:#fff; border:none; padding:16px 36px; border-radius:4px;
-  font-size:1.05rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:10px;
-  box-shadow:0 4px 20px rgba(88,101,242,0.5); transition:0.15s;
-}
-.btn-watch-live:hover { background:#4752c4; transform:scale(1.03); }
+  width: 80px;
 
-.audio-warning {
-  position:absolute; top:20px; left:50%; transform:translateX(-50%);
-  padding:10px 20px; border-radius:6px; font-weight:700; font-size:0.85rem; z-index:60; display:none;
+  height: 80px;
+
+  border-radius: 50%;
+
+  margin: 0 auto 18px;
+
+  background: #2b2d31;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 36px;
+
 }
-.audio-warning.green { background:#23a55a; color:#fff; }
-.audio-warning.red { background:#f23f42; color:#fff; cursor:pointer; }
-.audio-warning.blue { background:#5865f2; color:#fff; cursor:pointer; }
+
+.placeholder h2 {
+
+  margin: 0 0 10px;
+
+  color: #f2f3f5;
+
+}
+
+.placeholder p {
+
+  margin: 0;
+
+  color: #949ba4;
+
+  line-height: 1.5;
+
+}
+
+
+/* ==========================================================
+OVERLAY
+========================================================== */
+
+.overlay {
+
+  display: none;
+
+  position: absolute;
+
+  inset: 0;
+
+  background:
+    rgba(17,18,20,.94);
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-direction: column;
+
+  gap: 15px;
+
+  z-index: 20;
+
+}
+
+.overlay.show {
+
+  display: flex;
+
+}
+
+.overlay-title {
+
+  font-size: 22px;
+
+  font-weight: bold;
+
+  color: white;
+
+}
+
+.overlay-sub {
+
+  color: #949ba4;
+
+  text-align: center;
+
+}
+
+.primary {
+
+  background: #5865f2;
+
+  color: white;
+
+  border: 0;
+
+  border-radius: 5px;
+
+  padding: 13px 24px;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+}
+
+.primary:hover {
+
+  background: #4752c4;
+
+}
+
+
+/* ==========================================================
+AVISO AUDIO
+========================================================== */
+
+.audio-message {
+
+  position: absolute;
+
+  top: 20px;
+
+  left: 50%;
+
+  transform:
+    translateX(-50%);
+
+  z-index: 40;
+
+  display: none;
+
+  background: #23a55a;
+
+  color: white;
+
+  padding: 10px 16px;
+
+  border-radius: 5px;
+
+  font-size: 13px;
+
+  font-weight: bold;
+
+}
+
+.audio-message.show {
+
+  display: block;
+
+}
+
+.audio-message.warning {
+
+  background: #f0a020;
+
+}
+
+
+/* ==========================================================
+DOCK
+========================================================== */
 
 .dock {
-  height:68px; background:#232428; border-top:1px solid #1e1f22;
-  display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0;
-}
-.d-btn {
-  height:38px; padding:0 16px; border-radius:4px; font-weight:600; font-size:0.85rem;
-  border:none; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.15s;
-}
-.d-btn.primary { background:#5865f2; color:#fff; }
-.d-btn.primary:hover { background:#4752c4; }
-.d-btn.danger { background:#da373c; color:#fff; }
-.d-btn.danger:hover { background:#b82e33; }
-.d-btn.secondary { background:#4e5058; color:#fff; }
-.d-btn.secondary:hover { background:#6d6f78; }
 
-.vol-box { display:flex; align-items:center; gap:8px; background:#1e1f22; padding:4px 10px; border-radius:4px; }
-.vol-slider { -webkit-appearance:none; width:80px; height:4px; border-radius:2px; background:#4e5058; outline:none; }
-.vol-slider::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:#fff; cursor:pointer; }
+  height: 72px;
+
+  flex-shrink: 0;
+
+  background: #232428;
+
+  border-top:
+    1px solid #1e1f22;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding: 0 14px;
+
+}
+
+.buttons {
+
+  display: flex;
+
+  gap: 8px;
+
+}
+
+.btn {
+
+  height: 40px;
+
+  padding: 0 16px;
+
+  border: 0;
+
+  border-radius: 5px;
+
+  color: white;
+
+  background: #4e5058;
+
+  cursor: pointer;
+
+  font-weight: bold;
+
+}
+
+.btn:hover {
+
+  background: #6d6f78;
+
+}
+
+.btn.stream {
+
+  background: #5865f2;
+
+}
+
+.btn.stream:hover {
+
+  background: #4752c4;
+
+}
+
+.btn.stop {
+
+  background: #da373c;
+
+}
+
+.btn.stop:hover {
+
+  background: #b82e33;
+
+}
+
+.controls {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+}
+
+.volume {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  background: #1e1f22;
+
+  padding: 5px 10px;
+
+  border-radius: 5px;
+
+}
+
+.volume input {
+
+  width: 90px;
+
+}
 
 .toast {
-  position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#111214; border:1px solid #383a40;
-  color:#fff; padding:8px 18px; border-radius:4px; font-size:0.85rem; opacity:0; pointer-events:none; transition:0.2s; z-index:200;
+
+  position: fixed;
+
+  bottom: 90px;
+
+  left: 50%;
+
+  transform:
+    translateX(-50%);
+
+  background: #111214;
+
+  border:
+    1px solid #3f4147;
+
+  color: white;
+
+  padding: 10px 18px;
+
+  border-radius: 5px;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  transition: .2s;
+
+  z-index: 100;
+
 }
-.toast.show { opacity:1; }
+
+.toast.show {
+
+  opacity: 1;
+
+}
+
+
+/* ==========================================================
+RESPONSIVO
+========================================================== */
+
+@media(max-width:700px) {
+
+  .dock {
+
+    height: auto;
+
+    min-height: 70px;
+
+    padding: 8px;
+
+    gap: 8px;
+
+  }
+
+  .controls {
+
+    gap: 4px;
+
+  }
+
+  .volume {
+
+    display: none;
+
+  }
+
+  .btn {
+
+    padding: 0 10px;
+
+    font-size: 12px;
+
+  }
+
+}
+
 </style>
+
 </head>
+
+
 <body>
 
-<div class="topbar">
-  <div class="topbar-left">
-    <button class="d-btn secondary" style="height:30px; padding:0 10px;" onclick="location.href='/'">← Sair</button>
-    <span id="roomTitle">Sala</span>
-    <div class="badge-live" id="badgeLive">● AO VIVO</div>
-  </div>
-  <div style="font-size:0.85rem; color:#94a3b8;">
-    👥 <span id="viewerCount">0</span> online
-  </div>
-</div>
 
-<div class="stage" id="stageArea">
-  <!-- AVISOS DE ÁUDIO NO TOPO -->
-  <div class="audio-warning" id="audioWarning"></div>
+<!-- ========================================================
+TOPO
+========================================================= -->
 
-  <!-- OVERLAY DE ASSISTIR -->
-  <div class="watch-overlay" id="watchOverlay">
-    <div style="font-size:3rem;">📡</div>
-    <h2 style="color:#fff; font-size:1.4rem;">Transmissão em Andamento!</h2>
-    <p style="color:#94a3b8; font-size:0.9rem;">Clique no botão abaixo para assistir em 60 FPS com som do jogo.</p>
-    <button class="btn-watch-live" onclick="startWatching()">
-      <span>▶</span> Assistir Transmissão
-    </button>
-  </div>
+<header class="topbar">
 
-  <div class="placeholder" id="placeholder">
-    <div class="placeholder-icon">🖥️</div>
-    <h2 id="placeholderTitle">Aguardando Transmissão</h2>
-    <p id="placeholderSub">O host ainda não iniciou o compartilhamento de tela.</p>
+  <div class="room-name">
+
+    <span class="room-icon">
+      #
+    </span>
+
+    <span id="roomName">
+      Sala
+    </span>
+
+    <span
+      class="live"
+      id="liveBadge"
+    >
+      AO VIVO
+    </span>
+
   </div>
 
-  <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
-</div>
 
-<div class="dock">
-  <div style="display:flex; gap:8px;">
-    <button class="d-btn primary" id="btnStream" onclick="toggleStream()" style="display:none;">📡 Transmitir Tela</button>
-    <button class="d-btn primary" id="btnWatchBar" onclick="startWatching()" style="display:none;">▶ Assistir</button>
+  <div class="online">
+
+    👥
+    <span id="onlineCount">
+      0
+    </span>
+    online
+
   </div>
-  <div style="display:flex; gap:8px; align-items:center;">
-    <div class="vol-box">
-      <button class="d-btn secondary" style="height:28px; padding:0 8px;" id="btnMute" onclick="toggleMute()">🔊</button>
-      <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="100" oninput="setVolume(this.value)">
+
+</header>
+
+
+<!-- ========================================================
+PALCO
+========================================================= -->
+
+<main
+  class="stage"
+  id="stage"
+>
+
+
+  <div
+    class="placeholder"
+    id="placeholder"
+  >
+
+    <div class="placeholder-icon">
+      🖥️
     </div>
-    <button class="d-btn secondary" onclick="toggleFullscreen()">⛶ Tela Cheia</button>
-    <button class="d-btn secondary" onclick="copyLink()">📋 Copiar Link</button>
-  </div>
-</div>
 
-<div class="toast" id="toast"></div>
+    <h2 id="placeholderTitle">
+      Aguardando transmissão
+    </h2>
+
+    <p id="placeholderText">
+      O host ainda não começou a compartilhar a tela.
+    </p>
+
+  </div>
+
+
+  <video
+    id="screenVideo"
+    autoplay
+    playsinline
+    controls="false"
+  ></video>
+
+
+  <!-- ======================================================
+  OVERLAY ASSISTIR
+  ======================================================= -->
+
+  <div
+    class="overlay"
+    id="watchOverlay"
+  >
+
+    <div style="font-size:48px;">
+      📡
+    </div>
+
+    <div class="overlay-title">
+      Transmissão ao vivo
+    </div>
+
+    <div class="overlay-sub">
+      Clique para assistir à tela e ouvir o áudio.
+    </div>
+
+    <button
+      class="primary"
+      onclick="startWatching()"
+    >
+      ▶ Assistir transmissão
+    </button>
+
+  </div>
+
+
+  <div
+    class="audio-message"
+    id="audioMessage"
+  ></div>
+
+
+</main>
+
+
+<!-- ========================================================
+DOCK
+========================================================= -->
+
+<footer class="dock">
+
+
+  <div class="buttons">
+
+    <button
+      class="btn stream"
+      id="streamButton"
+      onclick="toggleStream()"
+      style="display:none"
+    >
+      📡 Transmitir tela
+    </button>
+
+
+    <button
+      class="btn"
+      id="watchButton"
+      onclick="startWatching()"
+      style="display:none"
+    >
+      ▶ Assistir
+    </button>
+
+
+    <button
+      class="btn"
+      onclick="copyLink()"
+    >
+      🔗 Copiar link
+    </button>
+
+  </div>
+
+
+  <div class="controls">
+
+
+    <div class="volume">
+
+      <button
+        class="btn"
+        id="muteButton"
+        onclick="toggleMute()"
+        style="height:30px;padding:0 8px"
+      >
+        🔊
+      </button>
+
+      <input
+        id="volumeSlider"
+        type="range"
+        min="0"
+        max="100"
+        value="100"
+        oninput="changeVolume(this.value)"
+      >
+
+    </div>
+
+
+    <button
+      class="btn"
+      onclick="toggleFullscreen()"
+    >
+      ⛶ Tela cheia
+    </button>
+
+
+  </div>
+
+</footer>
+
+
+<div
+  class="toast"
+  id="toast"
+></div>
+
 
 <script src="/socket.io/socket.io.js"></script>
+
+
 <script>
-const socket = io();
-const urlParams = new URLSearchParams(window.location.search);
-const role = urlParams.get('role') || 'viewer';
-const roomId = window.location.pathname.split('/room/')[1].split('?')[0];
 
-document.getElementById('roomTitle').textContent = '#' + roomId;
-const video = document.getElementById('screenVideo');
-const placeholder = document.getElementById('placeholder');
-const badgeLive = document.getElementById('badgeLive');
-const watchOverlay = document.getElementById('watchOverlay');
-const audioWarning = document.getElementById('audioWarning');
-const btnStream = document.getElementById('btnStream');
-const btnWatchBar = document.getElementById('btnWatchBar');
+/*
+============================================================
+CONFIGURAÇÃO
+============================================================
+*/
 
-let isHost = (role === 'host');
-let localStream = null;
-let peerConnections = {};
-let viewerPC = null;
-let iceQueue = [];
-
-const rtcConfig = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' }
-  ],
-  iceCandidatePoolSize: 10
-};
-
-function showToast(m) {
-  const t = document.getElementById('toast');
-  t.textContent = m; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-socket.emit('join-room', { roomId, isHost });
-
-if (isHost) {
-  btnStream.style.display = 'inline-flex';
-  document.getElementById('placeholderTitle').textContent = 'Você é o Host';
-  document.getElementById('placeholderSub').textContent = 'Clique em "Transmitir Tela" para compartilhar com som do jogo.';
-}
-
-// ======================== HOST ========================
-async function toggleStream() {
-  if (!localStream) {
-    try {
-      localStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: {
-          autoGainControl: false,
-          echoCancellation: false,
-          noiseSuppression: false,
-          channelCount: 2
-        }
-      });
-
-      const audioTracks = localStream.getAudioTracks();
-      if (audioTracks.length > 0) {
-        audioWarning.className = 'audio-warning green';
-        audioWarning.textContent = '🔊 Áudio do Sistema/Jogo Capturado!';
-        audioWarning.style.display = 'block';
-        setTimeout(() => audioWarning.style.display = 'none', 4000);
-      } else {
-        audioWarning.className = 'audio-warning red';
-        audioWarning.innerHTML = '⚠️ SEM ÁUDIO: Você não marcou "Compartilhar áudio do sistema"! (Clique para refazer)';
-        audioWarning.style.display = 'block';
-        audioWarning.onclick = () => { toggleStream(); setTimeout(toggleStream, 300); };
-      }
-
-      video.srcObject = localStream;
-      video.muted = true; // Host mudo para não dar retorno
-      video.style.display = 'block';
-      placeholder.style.display = 'none';
-      badgeLive.classList.add('show');
-
-      btnStream.className = 'd-btn danger';
-      btnStream.innerHTML = '⏹ Parar Transmissão';
-
-      socket.emit('host-live', { roomId });
-      localStream.getVideoTracks()[0].onended = () => toggleStream();
-    } catch (e) {
-      showToast('Transmissão cancelada');
-    }
-  } else {
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
-    audioWarning.style.display = 'none';
-    video.style.display = 'none';
-    placeholder.style.display = 'flex';
-    badgeLive.classList.remove('show');
-
-    btnStream.className = 'd-btn primary';
-    btnStream.innerHTML = '📡 Transmitir Tela';
-
-    socket.emit('host-stop', { roomId });
-    for (let id in peerConnections) peerConnections[id].close();
-    peerConnections = {};
-  }
-}
-
-// Host cria a conexão WebRTC enviando vídeo E áudio
-socket.on('viewer-ready', async ({ viewerId }) => {
-  if (!localStream) return;
-  if (peerConnections[viewerId]) peerConnections[viewerId].close();
-
-  const pc = new RTCPeerConnection(rtcConfig);
-  peerConnections[viewerId] = pc;
-
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
+const socket =
+  io({
+    transports: [
+      "websocket",
+      "polling"
+    ]
   });
 
-  pc.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('webrtc-ice', { to: viewerId, candidate: e.candidate });
-  };
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  socket.emit('webrtc-offer', { to: viewerId, offer });
-});
+const pathParts =
+  window.location.pathname
+    .split("/");
 
-socket.on('webrtc-answer', async ({ from, answer }) => {
-  const pc = peerConnections[from];
-  if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
-});
 
-// ======================== VIEWER ========================
-function startWatching() {
-  watchOverlay.classList.remove('show');
-  btnWatchBar.style.display = 'none';
-  showToast('Conectando...');
-  socket.emit('request-stream', { roomId });
+const roomId =
+  decodeURIComponent(
+    pathParts[
+      pathParts.length - 1
+    ]
+  ).toUpperCase();
+
+
+const params =
+  new URLSearchParams(
+    window.location.search
+  );
+
+
+const isHost =
+  params.get("role") === "host";
+
+
+document
+  .getElementById("roomName")
+  .textContent =
+  roomId;
+
+
+/*
+============================================================
+ELEMENTOS
+============================================================
+*/
+
+const video =
+  document.getElementById(
+    "screenVideo"
+  );
+
+
+const placeholder =
+  document.getElementById(
+    "placeholder"
+  );
+
+
+const placeholderTitle =
+  document.getElementById(
+    "placeholderTitle"
+  );
+
+
+const placeholderText =
+  document.getElementById(
+    "placeholderText"
+  );
+
+
+const liveBadge =
+  document.getElementById(
+    "liveBadge"
+  );
+
+
+const watchOverlay =
+  document.getElementById(
+    "watchOverlay"
+  );
+
+
+const streamButton =
+  document.getElementById(
+    "streamButton"
+  );
+
+
+const watchButton =
+  document.getElementById(
+    "watchButton"
+  );
+
+
+const audioMessage =
+  document.getElementById(
+    "audioMessage"
+  );
+
+
+/*
+============================================================
+WEBRTC
+============================================================
+*/
+
+const rtcConfig = {
+
+  iceServers: [
+
+    {
+      urls:
+        "stun:stun.l.google.com:19302"
+    },
+
+    {
+      urls:
+        "stun:stun1.l.google.com:19302"
+    },
+
+    {
+      urls:
+        "stun:stun.cloudflare.com:3478"
+    },
+
+    /*
+    TURN fallback
+    */
+
+    {
+      urls:
+        "turn:openrelay.metered.ca:80",
+
+      username:
+        "openrelay",
+
+      credential:
+        "openrelay"
+    },
+
+    {
+      urls:
+        "turn:openrelay.metered.ca:443",
+
+      username:
+        "openrelay",
+
+      credential:
+        "openrelay"
+    }
+
+  ],
+
+  iceCandidatePoolSize: 10
+
+};
+
+
+/*
+============================================================
+ESTADO
+============================================================
+*/
+
+let localStream =
+  null;
+
+
+let viewerConnections =
+  new Map();
+
+
+let viewerPC =
+  null;
+
+
+let pendingIce =
+  [];
+
+
+let isStreaming =
+  false;
+
+
+/*
+============================================================
+TOAST
+============================================================
+*/
+
+function showToast(
+  text
+) {
+
+  const toast =
+    document.getElementById(
+      "toast"
+    );
+
+
+  toast.textContent =
+    text;
+
+
+  toast.classList.add(
+    "show"
+  );
+
+
+  setTimeout(
+    () => {
+
+      toast.classList.remove(
+        "show"
+      );
+
+    },
+    2500
+  );
+
 }
 
-socket.on('webrtc-offer', async ({ from, offer }) => {
-  if (viewerPC) viewerPC.close();
 
-  viewerPC = new RTCPeerConnection(rtcConfig);
-  const mediaStream = new MediaStream();
-  iceQueue = [];
+/*
+============================================================
+ENTRAR NA SALA
+============================================================
+*/
 
-  video.srcObject = mediaStream;
+socket.emit(
+  "join-room",
+  {
 
-  viewerPC.ontrack = (event) => {
-    mediaStream.addTrack(event.track);
+    roomId,
 
-    video.style.display = 'block';
-    placeholder.style.display = 'none';
-    watchOverlay.classList.remove('show');
-    badgeLive.classList.add('show');
+    isHost
 
-    // Desbloqueia vídeo e áudio imediatamente
-    video.muted = false;
-    video.volume = 1;
-    video.play().catch(() => {
-      // Se o Chrome barrar o som, muta primeiro para a imagem aparecer e mostra aviso
-      video.muted = true;
-      video.play();
-      audioWarning.className = 'audio-warning blue';
-      audioWarning.innerHTML = '🔊 Clique aqui para ouvir o áudio do jogo!';
-      audioWarning.style.display = 'block';
-      audioWarning.onclick = () => {
-        video.muted = false;
-        video.volume = 1;
-        audioWarning.style.display = 'none';
-        document.getElementById('btnMute').textContent = '🔊';
-      };
-    });
-  };
-
-  viewerPC.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('webrtc-ice', { to: from, candidate: e.candidate });
-  };
-
-  await viewerPC.setRemoteDescription(new RTCSessionDescription(offer));
-
-  for (const cand of iceQueue) {
-    await viewerPC.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
   }
-  iceQueue = [];
+);
 
-  const answer = await viewerPC.createAnswer();
-  await viewerPC.setLocalDescription(answer);
-  socket.emit('webrtc-answer', { to: from, answer });
-});
 
-socket.on('webrtc-ice', async ({ from, candidate }) => {
-  if (isHost) {
-    const pc = peerConnections[from];
-    if (pc && pc.remoteDescription) {
-      try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e){}
-    }
+/*
+============================================================
+HOST INTERFACE
+============================================================
+*/
+
+if (isHost) {
+
+  streamButton.style.display =
+    "inline-block";
+
+
+  placeholderTitle.textContent =
+    "Você é o host";
+
+
+  placeholderText.textContent =
+    "Clique em “Transmitir tela” para começar.";
+
+}
+
+
+/*
+============================================================
+HOST - TRANSMITIR
+============================================================
+*/
+
+async function toggleStream() {
+
+  if (
+    !localStream
+  ) {
+
+    await startStream();
+
   } else {
-    if (viewerPC && viewerPC.remoteDescription) {
-      try { await viewerPC.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e){}
-    } else {
-      iceQueue.push(candidate);
+
+    stopStream();
+
+  }
+
+}
+
+
+/*
+============================================================
+INICIAR STREAM
+============================================================
+*/
+
+async function startStream() {
+
+  try {
+
+    showToast(
+      "Preparando captura de tela..."
+    );
+
+
+    /*
+    --------------------------------------------------------
+    CAPTURA
+    --------------------------------------------------------
+    */
+
+    localStream =
+      await navigator
+        .mediaDevices
+        .getDisplayMedia({
+
+          video: {
+
+            width: {
+              ideal: 1920,
+              max: 3840
+            },
+
+            height: {
+              ideal: 1080,
+              max: 2160
+            },
+
+            frameRate: {
+              ideal: 60,
+              max: 60
+            }
+
+          },
+
+          audio: {
+
+            channelCount: 2,
+
+            echoCancellation: false,
+
+            noiseSuppression: false,
+
+            autoGainControl: false
+
+          }
+
+        });
+
+
+    /*
+    --------------------------------------------------------
+    VERIFICA VÍDEO
+    --------------------------------------------------------
+    */
+
+    const videoTracks =
+      localStream.getVideoTracks();
+
+
+    if (
+      videoTracks.length === 0
+    ) {
+
+      throw new Error(
+        "Nenhuma faixa de vídeo foi capturada."
+      );
+
     }
+
+
+    /*
+    --------------------------------------------------------
+    VERIFICA AUDIO
+    --------------------------------------------------------
+    */
+
+    const audioTracks =
+      localStream.getAudioTracks();
+
+
+    if (
+      audioTracks.length > 0
+    ) {
+
+      showAudioMessage(
+        "🔊 Áudio do sistema capturado",
+        false
+      );
+
+    } else {
+
+      showAudioMessage(
+        "⚠️ A tela foi capturada, mas o áudio do sistema não foi disponibilizado.",
+        true
+      );
+
+    }
+
+
+    /*
+    --------------------------------------------------------
+    MOSTRA PREVIEW HOST
+    --------------------------------------------------------
+    */
+
+    video.srcObject =
+      localStream;
+
+
+    video.muted =
+      true;
+
+
+    video.classList.add(
+      "active"
+    );
+
+
+    placeholder.style.display =
+      "none";
+
+
+    liveBadge.classList.add(
+      "show"
+    );
+
+
+    streamButton.classList.remove(
+      "stream"
+    );
+
+
+    streamButton.classList.add(
+      "stop"
+    );
+
+
+    streamButton.textContent =
+      "⏹ Parar transmissão";
+
+
+    isStreaming =
+      true;
+
+
+    socket.emit(
+      "host-live",
+      {
+        roomId
+      }
+    );
+
+
+    /*
+    --------------------------------------------------------
+    SE O USUÁRIO PARAR PELO BOTÃO DO SISTEMA
+    --------------------------------------------------------
+    */
+
+    videoTracks[0].onended =
+      () => {
+
+        if (localStream) {
+
+          stopStream();
+
+        }
+
+      };
+
+
+    showToast(
+      "Transmissão iniciada!"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Erro ao iniciar:",
+      error
+    );
+
+
+    localStream =
+      null;
+
+
+    showToast(
+      "A transmissão foi cancelada."
+    );
+
   }
-});
 
-socket.on('stream-is-live', () => {
-  if (!isHost) {
-    watchOverlay.classList.add('show');
-    btnWatchBar.style.display = 'inline-flex';
-    badgeLive.classList.add('show');
-  }
-});
-
-socket.on('stream-stopped', () => {
-  video.style.display = 'none';
-  placeholder.style.display = 'flex';
-  watchOverlay.classList.remove('show');
-  badgeLive.classList.remove('show');
-  btnWatchBar.style.display = 'none';
-  audioWarning.style.display = 'none';
-});
-
-socket.on('host-left', () => {
-  video.style.display = 'none';
-  placeholder.style.display = 'flex';
-  watchOverlay.classList.remove('show');
-  badgeLive.classList.remove('show');
-});
-
-socket.on('room-status', (d) => {
-  document.getElementById('viewerCount').textContent = d.viewers;
-  if (!isHost && d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
-    watchOverlay.classList.add('show');
-    btnWatchBar.style.display = 'inline-flex';
-    badgeLive.classList.add('show');
-  }
-});
-
-// ======================== CONTROLES ========================
-function setVolume(v) {
-  video.volume = v / 100;
-  video.muted = (v == 0);
-  document.getElementById('btnMute').textContent = (v == 0) ? '🔇' : '🔊';
 }
+
+
+/*
+============================================================
+PARAR STREAM
+============================================================
+*/
+
+function stopStream() {
+
+  if (
+    localStream
+  ) {
+
+    localStream
+      .getTracks()
+      .forEach(
+        track => track.stop()
+      );
+
+  }
+
+
+  localStream =
+    null;
+
+
+  isStreaming =
+    false;
+
+
+  for (
+    const pc
+    of viewerConnections.values()
+  ) {
+
+    try {
+
+      pc.close();
+
+    } catch {}
+
+  }
+
+
+  viewerConnections.clear();
+
+
+  video.srcObject =
+    null;
+
+
+  video.classList.remove(
+    "active"
+  );
+
+
+  placeholder.style.display =
+    "block";
+
+
+  placeholderTitle.textContent =
+    "Você é o host";
+
+
+  placeholderText.textContent =
+    "Clique em “Transmitir tela” para começar.";
+
+
+  liveBadge.classList.remove(
+    "show"
+  );
+
+
+  streamButton.classList.remove(
+    "stop"
+  );
+
+
+  streamButton.classList.add(
+    "stream"
+  );
+
+
+  streamButton.textContent =
+    "📡 Transmitir tela";
+
+
+  audioMessage.classList.remove(
+    "show"
+  );
+
+
+  socket.emit(
+    "host-stop",
+    {
+      roomId
+    }
+  );
+
+}
+
+
+/*
+============================================================
+HOST - NOVO VIEWER
+============================================================
+*/
+
+socket.on(
+  "viewer-ready",
+  async ({
+    viewerId
+  }) => {
+
+    if (
+      !localStream ||
+      !isStreaming
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      if (
+        viewerConnections.has(
+          viewerId
+        )
+      ) {
+
+        try {
+
+          viewerConnections
+            .get(viewerId)
+            .close();
+
+        } catch {}
+
+      }
+
+
+      const pc =
+        new RTCPeerConnection(
+          rtcConfig
+        );
+
+
+      viewerConnections.set(
+        viewerId,
+        pc
+      );
+
+
+      /*
+      ------------------------------------------------------
+      ADICIONA VIDEO + AUDIO
+      ------------------------------------------------------
+      */
+
+      for (
+        const track
+        of localStream.getTracks()
+      ) {
+
+        pc.addTrack(
+          track,
+          localStream
+        );
+
+      }
+
+
+      /*
+      ------------------------------------------------------
+      ICE
+      ------------------------------------------------------
+      */
+
+      pc.onicecandidate =
+        event => {
+
+          if (
+            event.candidate
+          ) {
+
+            socket.emit(
+              "webrtc-ice",
+              {
+
+                to:
+                  viewerId,
+
+                candidate:
+                  event.candidate
+
+              }
+            );
+
+          }
+
+        };
+
+
+      pc.onconnectionstatechange =
+        () => {
+
+          console.log(
+            "Host -> viewer:",
+            viewerId,
+            pc.connectionState
+          );
+
+
+          if (
+            pc.connectionState ===
+              "failed" ||
+            pc.connectionState ===
+              "closed"
+          ) {
+
+            viewerConnections.delete(
+              viewerId
+            );
+
+          }
+
+        };
+
+
+      /*
+      ------------------------------------------------------
+      OFFER
+      ------------------------------------------------------
+      */
+
+      const offer =
+        await pc.createOffer();
+
+
+      await pc.setLocalDescription(
+        offer
+      );
+
+
+      socket.emit(
+        "webrtc-offer",
+        {
+
+          to:
+            viewerId,
+
+          offer:
+            pc.localDescription
+
+        }
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "Erro criando conexão:",
+        error
+      );
+
+    }
+
+  }
+);
+
+
+/*
+============================================================
+HOST - ANSWER
+============================================================
+*/
+
+socket.on(
+  "webrtc-answer",
+  async ({
+    from,
+    answer
+  }) => {
+
+    if (!isHost) return;
+
+
+    const pc =
+      viewerConnections.get(
+        from
+      );
+
+
+    if (!pc) return;
+
+
+    try {
+
+      await pc.setRemoteDescription(
+        new RTCSessionDescription(
+          answer
+        )
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "Erro no answer:",
+        error
+      );
+
+    }
+
+  }
+);
+
+
+/*
+============================================================
+VIEWER - ASSISTIR
+============================================================
+*/
+
+function startWatching() {
+
+  watchOverlay.classList.remove(
+    "show"
+  );
+
+
+  watchButton.style.display =
+    "none";
+
+
+  showToast(
+    "Conectando à transmissão..."
+  );
+
+
+  socket.emit(
+    "request-stream",
+    {
+      roomId
+    }
+  );
+
+}
+
+
+/*
+============================================================
+TRANSMISSÃO DISPONÍVEL
+============================================================
+*/
+
+socket.on(
+  "stream-is-live",
+  () => {
+
+    if (
+      isHost
+    ) {
+
+      return;
+
+    }
+
+
+    watchOverlay.classList.add(
+      "show"
+    );
+
+
+    watchButton.style.display =
+      "inline-block";
+
+
+    liveBadge.classList.add(
+      "show"
+    );
+
+  }
+);
+
+
+/*
+============================================================
+VIEWER RECEBE OFFER
+============================================================
+*/
+
+socket.on(
+  "webrtc-offer",
+  async ({
+    from,
+    offer
+  }) => {
+
+    if (
+      isHost
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      if (
+        viewerPC
+      ) {
+
+        viewerPC.close();
+
+      }
+
+
+      viewerPC =
+        new RTCPeerConnection(
+          rtcConfig
+        );
+
+
+      pendingIce =
+        [];
+
+
+      const mediaStream =
+        new MediaStream();
+
+
+      video.srcObject =
+        mediaStream;
+
+
+      /*
+      ------------------------------------------------------
+      RECEBE VIDEO + AUDIO
+      ------------------------------------------------------
+      */
+
+      viewerPC.ontrack =
+        async event => {
+
+          console.log(
+            "Track recebida:",
+            event.track.kind
+          );
+
+
+          /*
+          Evita adicionar a mesma track
+          duas vezes.
+          */
+
+          if (
+            !mediaStream
+              .getTracks()
+              .some(
+                track =>
+                  track.id ===
+                  event.track.id
+              )
+          ) {
+
+            mediaStream.addTrack(
+              event.track
+            );
+
+          }
+
+
+          video.classList.add(
+            "active"
+          );
+
+
+          placeholder.style.display =
+            "none";
+
+
+          watchOverlay.classList.remove(
+            "show"
+          );
+
+
+          liveBadge.classList.add(
+            "show"
+          );
+
+
+          /*
+          ----------------------------------------------
+          ÁUDIO
+          ----------------------------------------------
+          */
+
+          const hasAudio =
+            mediaStream
+              .getAudioTracks()
+              .length > 0;
+
+
+          if (
+            hasAudio
+          ) {
+
+            showAudioMessage(
+              "🔊 Áudio da transmissão conectado",
+              false
+            );
+
+          }
+
+
+          video.muted =
+            false;
+
+          video.volume =
+            1;
+
+
+          try {
+
+            await video.play();
+
+          } catch (error) {
+
+            /*
+            Navegador bloqueou autoplay.
+            O botão fica disponível.
+            */
+
+            video.muted =
+              true;
+
+
+            await video
+              .play()
+              .catch(
+                () => {}
+              );
+
+
+            showAudioMessage(
+              "🔊 Clique aqui para ativar o áudio",
+              true
+            );
+
+
+            audioMessage.onclick =
+              async () => {
+
+                video.muted =
+                  false;
+
+                video.volume =
+                  1;
+
+                await video
+                  .play()
+                  .catch(
+                    () => {}
+                  );
+
+
+                audioMessage.classList.remove(
+                  "show"
+                );
+
+              };
+
+          }
+
+        };
+
+
+      /*
+      ------------------------------------------------------
+      ICE VIEWER
+      ------------------------------------------------------
+      */
+
+      viewerPC.onicecandidate =
+        event => {
+
+          if (
+            event.candidate
+          ) {
+
+            socket.emit(
+              "webrtc-ice",
+              {
+
+                to:
+                  from,
+
+                candidate:
+                  event.candidate
+
+              }
+            );
+
+          }
+
+        };
+
+
+      viewerPC.onconnectionstatechange =
+        () => {
+
+          console.log(
+            "Viewer:",
+            viewerPC.connectionState
+          );
+
+
+          if (
+            viewerPC.connectionState ===
+            "failed"
+          ) {
+
+            showToast(
+              "Não foi possível conectar à transmissão."
+            );
+
+          }
+
+        };
+
+
+      /*
+      ------------------------------------------------------
+      OFFER
+      ------------------------------------------------------
+      */
+
+      await viewerPC.setRemoteDescription(
+        new RTCSessionDescription(
+          offer
+        )
+      );
+
+
+      /*
+      ------------------------------------------------------
+      ICE QUEUE
+      ------------------------------------------------------
+      */
+
+      for (
+        const candidate
+        of pendingIce
+      ) {
+
+        await viewerPC
+          .addIceCandidate(
+            new RTCIceCandidate(
+              candidate
+            )
+          )
+          .catch(
+            () => {}
+          );
+
+      }
+
+
+      pendingIce =
+        [];
+
+
+      /*
+      ------------------------------------------------------
+      ANSWER
+      ------------------------------------------------------
+      */
+
+      const answer =
+        await viewerPC.createAnswer();
+
+
+      await viewerPC.setLocalDescription(
+        answer
+      );
+
+
+      socket.emit(
+        "webrtc-answer",
+        {
+
+          to:
+            from,
+
+          answer:
+            viewerPC.localDescription
+
+        }
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "Erro no viewer:",
+        error
+      );
+
+
+      showToast(
+        "Erro ao conectar à transmissão."
+      );
+
+    }
+
+  }
+);
+
+
+/*
+============================================================
+ICE
+============================================================
+*/
+
+socket.on(
+  "webrtc-ice",
+  async ({
+    from,
+    candidate
+  }) => {
+
+    if (!candidate) {
+      return;
+    }
+
+
+    /*
+    --------------------------------------------------------
+    HOST
+    --------------------------------------------------------
+    */
+
+    if (isHost) {
+
+      const pc =
+        viewerConnections.get(
+          from
+        );
+
+
+      if (
+        pc &&
+        pc.remoteDescription
+      ) {
+
+        try {
+
+          await pc.addIceCandidate(
+            new RTCIceCandidate(
+              candidate
+            )
+          );
+
+        } catch {}
+
+      }
+
+
+      return;
+
+    }
+
+
+    /*
+    --------------------------------------------------------
+    VIEWER
+    --------------------------------------------------------
+    */
+
+    if (
+      viewerPC &&
+      viewerPC.remoteDescription
+    ) {
+
+      try {
+
+        await viewerPC.addIceCandidate(
+          new RTCIceCandidate(
+            candidate
+          )
+        );
+
+      } catch {}
+
+    } else {
+
+      pendingIce.push(
+        candidate
+      );
+
+    }
+
+  }
+);
+
+
+/*
+============================================================
+PARA TODOS
+============================================================
+*/
+
+socket.on(
+  "stream-stopped",
+  () => {
+
+    if (
+      !isHost
+    ) {
+
+      if (
+        viewerPC
+      ) {
+
+        viewerPC.close();
+
+        viewerPC =
+          null;
+
+      }
+
+
+      video.srcObject =
+        null;
+
+
+      video.classList.remove(
+        "active"
+      );
+
+
+      placeholder.style.display =
+        "block";
+
+
+      placeholderTitle.textContent =
+        "Transmissão encerrada";
+
+
+      placeholderText.textContent =
+        "O host parou de compartilhar a tela.";
+
+
+      watchOverlay.classList.remove(
+        "show"
+      );
+
+
+      watchButton.style.display =
+        "none";
+
+
+      liveBadge.classList.remove(
+        "show"
+      );
+
+
+      audioMessage.classList.remove(
+        "show"
+      );
+
+    }
+
+  }
+);
+
+
+/*
+============================================================
+HOST SAIU
+============================================================
+*/
+
+socket.on(
+  "host-left",
+  () => {
+
+    if (
+      isHost
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      viewerPC
+    ) {
+
+      viewerPC.close();
+
+      viewerPC =
+        null;
+
+    }
+
+
+    video.srcObject =
+      null;
+
+
+    video.classList.remove(
+      "active"
+    );
+
+
+    placeholder.style.display =
+      "block";
+
+
+    placeholderTitle.textContent =
+      "O host saiu";
+
+
+    placeholderText.textContent =
+      "A transmissão foi encerrada.";
+
+
+    watchOverlay.classList.remove(
+      "show"
+    );
+
+
+    watchButton.style.display =
+      "none";
+
+
+    liveBadge.classList.remove(
+      "show"
+    );
+
+  }
+);
+
+
+/*
+============================================================
+SALA EXPIRADA
+============================================================
+*/
+
+socket.on(
+  "room-expired",
+  () => {
+
+    alert(
+      "Esta sala expirou."
+    );
+
+
+    window.location.href =
+      "/";
+
+  }
+);
+
+
+/*
+============================================================
+STATUS
+============================================================
+*/
+
+socket.on(
+  "room-status",
+  data => {
+
+    document
+      .getElementById(
+        "onlineCount"
+      )
+      .textContent =
+      data.viewers;
+
+
+    if (
+      !isHost &&
+      data.isStreaming &&
+      !video.classList.contains(
+        "active"
+      )
+    ) {
+
+      watchOverlay.classList.add(
+        "show"
+      );
+
+
+      watchButton.style.display =
+        "inline-block";
+
+
+      liveBadge.classList.add(
+        "show"
+      );
+
+    }
+
+  }
+);
+
+
+/*
+============================================================
+HOST NEGADO
+============================================================
+*/
+
+socket.on(
+  "host-denied",
+  () => {
+
+    alert(
+      "Esta sala já possui um host."
+    );
+
+
+    window.location.href =
+      "/";
+
+  }
+);
+
+
+/*
+============================================================
+AUDIO
+============================================================
+*/
+
+function showAudioMessage(
+  message,
+  warning
+) {
+
+  audioMessage.textContent =
+    message;
+
+
+  audioMessage.classList.add(
+    "show"
+  );
+
+
+  if (warning) {
+
+    audioMessage.classList.add(
+      "warning"
+    );
+
+  } else {
+
+    audioMessage.classList.remove(
+      "warning"
+    );
+
+  }
+
+
+  setTimeout(
+    () => {
+
+      audioMessage.classList.remove(
+        "show"
+      );
+
+    },
+    4000
+  );
+
+}
+
+
+/*
+============================================================
+VOLUME
+============================================================
+*/
+
+function changeVolume(
+  value
+) {
+
+  video.volume =
+    Number(value) / 100;
+
+
+  video.muted =
+    Number(value) === 0;
+
+
+  document
+    .getElementById(
+      "muteButton"
+    )
+    .textContent =
+      video.muted
+        ? "🔇"
+        : "🔊";
+
+}
+
+
+/*
+============================================================
+MUDO
+============================================================
+*/
+
 function toggleMute() {
-  video.muted = !video.muted;
-  document.getElementById('btnMute').textContent = video.muted ? '🔇' : '🔊';
+
+  video.muted =
+    !video.muted;
+
+
+  document
+    .getElementById(
+      "muteButton"
+    )
+    .textContent =
+      video.muted
+        ? "🔇"
+        : "🔊";
+
 }
-function toggleFullscreen() {
-  const stage = document.getElementById('stageArea');
-  if (!document.fullscreenElement) stage.requestFullscreen().catch(()=>{});
-  else document.exitFullscreen().catch(()=>{});
+
+
+/*
+============================================================
+TELA CHEIA
+============================================================
+*/
+
+async function toggleFullscreen() {
+
+  try {
+
+    if (
+      !document.fullscreenElement
+    ) {
+
+      await document
+        .getElementById(
+          "stage"
+        )
+        .requestFullscreen();
+
+    } else {
+
+      await document.exitFullscreen();
+
+    }
+
+  } catch {}
+
 }
-function copyLink() {
-  const url = window.location.origin + '/room/' + roomId + '?role=viewer';
-  navigator.clipboard.writeText(url).then(() => showToast('📋 Link copiado com sucesso!'));
+
+
+/*
+============================================================
+COPIAR LINK
+============================================================
+*/
+
+async function copyLink() {
+
+  const link =
+    window.location.origin +
+    "/room/" +
+    roomId +
+    "?role=viewer";
+
+
+  try {
+
+    await navigator
+      .clipboard
+      .writeText(link);
+
+
+    showToast(
+      "Link da sala copiado!"
+    );
+
+  } catch {
+
+    showToast(
+      "Não foi possível copiar."
+    );
+
+  }
+
 }
+
+
+/*
+============================================================
+SAIR / FECHAR
+============================================================
+*/
+
+window.addEventListener(
+  "beforeunload",
+  () => {
+
+    if (
+      isHost &&
+      localStream
+    ) {
+
+      localStream
+        .getTracks()
+        .forEach(
+          track =>
+            track.stop()
+        );
+
+    }
+
+  }
+);
+
 </script>
+
 </body>
 </html>

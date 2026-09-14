@@ -1,18 +1,38 @@
-{
+﻿{
   "name": "screenroom",
   "version": "1.0.0",
-  "description": "ScreenRoom - compartilhamento de tela estilo Discord",
+  "description": "ScreenRoom - compartilhamento de tela em tempo real para amigos",
   "main": "main.js",
   "scripts": {
     "start": "node server.js",
     "server": "node server.js",
-    "app": "electron main.js"
+    "electron": "electron main.js",
+    "dev": "concurrently \"npm run server\" \"wait-on tcp:3000 && npm run electron\"",
+    "build:win": "electron-builder --win portable"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "socket.io": "^4.7.5"
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "electron": "^34.5.8"
+    "concurrently": "^9.1.2",
+    "electron": "^34.3.3",
+    "electron-builder": "^26.0.12",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.screenroom.app",
+    "productName": "ScreenRoom",
+    "files": [
+      "main.js",
+      "server.js",
+      "package.json",
+      "public/**/*"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    }
   }
 }

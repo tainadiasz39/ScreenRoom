@@ -3,184 +3,304 @@
   BrowserWindow,
   session,
   desktopCapturer
-} = require('electron');
+} = require("electron");
 
-let win = null;
+let mainWindow = null;
+
+const SCREENROOM_URL =
+  process.env.SCREENROOM_URL ||
+  "https://screenroom-01n7.onrender.com";
+
+
+/*
+============================================================
+CRIA JANELA
+============================================================
+*/
 
 function createWindow() {
-  win = new BrowserWindow({
-    width: 1400,
+
+  mainWindow = new BrowserWindow({
+
+    width: 1440,
     height: 900,
+
     minWidth: 1000,
-    minHeight: 700,
+    minHeight: 650,
+
+    backgroundColor: "#111214",
 
     autoHideMenuBar: true,
-    backgroundColor: '#1e1f22',
 
     webPreferences: {
+
       nodeIntegration: false,
+
       contextIsolation: true,
+
       backgroundThrottling: false
+
     }
+
   });
 
+
   /*
-   * ==========================================================
-   * CAPTURA DE TELA
-   * ==========================================================
-   *
-   * O navegador chama:
-   *
-   * navigator.mediaDevices.getDisplayMedia()
-   *
-   * O Electron intercepta o pedido aqui e entrega uma
-   * fonte REAL obtida pelo desktopCapturer.
-   *
-   * No Windows:
-   * audio: 'loopback'
-   *
-   * captura o áudio do sistema/jogo.
-   */
+  ==========================================================
+  CAPTURA DE TELA
+  ==========================================================
+  */
 
   session.defaultSession.setDisplayMediaRequestHandler(
-    async (request, callback) => {
-      try {
-        console.log('Pedido de captura recebido.');
-        console.log('Vídeo solicitado:', request.videoRequested);
-        console.log('Áudio solicitado:', request.audioRequested);
 
-        const sources = await desktopCapturer.getSources({
-          types: ['screen'],
-          thumbnailSize: {
-            width: 320,
-            height: 180
-          }
-        });
+    async (request, callback) => {
+
+      try {
+
+        console.log("");
+        console.log("================================");
+        console.log("SCREENROOM - PEDIDO DE CAPTURA");
+        console.log("================================");
+
+        console.log(
+          "Video solicitado:",
+          request.videoRequested
+        );
+
+        console.log(
+          "Audio solicitado:",
+          request.audioRequested
+        );
+
+
+        /*
+        ------------------------------------------------------
+        PEGA AS TELAS DISPONÍVEIS
+        ------------------------------------------------------
+        */
+
+        const sources =
+          await desktopCapturer.getSources({
+
+            types: ["screen"],
+
+            thumbnailSize: {
+              width: 320,
+              height: 180
+            }
+
+          });
+
 
         if (!sources || sources.length === 0) {
-          console.error('Nenhuma tela encontrada.');
+
+          console.error(
+            "Nenhuma tela encontrada."
+          );
+
           callback(null);
+
           return;
         }
 
+
         /*
-         * Usa a primeira tela encontrada.
-         * Depois podemos colocar um seletor para escolher
-         * monitor/janela, se você quiser.
-         */
+        ------------------------------------------------------
+        PRIMEIRA TELA
+        ------------------------------------------------------
+        */
 
-        const screen = sources[0];
+        const selectedScreen =
+          sources[0];
 
-        console.log('Tela selecionada:', screen.name);
-        console.log('ID da tela:', screen.id);
+
+        console.log(
+          "Tela escolhida:",
+          selectedScreen.name
+        );
+
+        console.log(
+          "ID:",
+          selectedScreen.id
+        );
+
 
         const result = {
-          video: screen
+
+          video: selectedScreen
+
         };
 
+
         /*
-         * Áudio do sistema somente quando o site pediu áudio.
-         * No Windows, loopback captura o som que está saindo
-         * pelo computador.
-         */
+        ------------------------------------------------------
+        AUDIO DO WINDOWS
+        ------------------------------------------------------
+
+        loopback = áudio que está saindo do computador.
+
+        Isso permite capturar:
+        - jogo
+        - música
+        - navegador
+        - Discord
+        - sons do Windows
+        ------------------------------------------------------
+        */
 
         if (request.audioRequested) {
-          result.audio = 'loopback';
-          console.log('Áudio do sistema: LOOPBACK ativado.');
+
+          result.audio = "loopback";
+
+          console.log(
+            "ÁUDIO DO SISTEMA: ATIVADO"
+          );
+
+        } else {
+
+          console.log(
+            "ÁUDIO NÃO FOI SOLICITADO"
+          );
+
         }
+
 
         callback(result);
 
+
       } catch (error) {
-        console.error('ERRO AO CAPTURAR TELA:', error);
+
+        console.error(
+          "ERRO NA CAPTURA:",
+          error
+        );
+
         callback(null);
+
       }
+
     }
+
   );
 
+
   /*
-   * Permissões de mídia.
-   */
+  ==========================================================
+  PERMISSÕES
+  ==========================================================
+  */
 
   session.defaultSession.setPermissionCheckHandler(
-    (webContents, permission, requestingOrigin) => {
-      if (
-        permission === 'media' ||
-        permission === 'display-capture'
-      ) {
-        return true;
-      }
+
+    (
+      webContents,
+      permission,
+      requestingOrigin
+    ) => {
 
       return true;
+
     }
+
   );
+
 
   session.defaultSession.setPermissionRequestHandler(
-    (webContents, permission, callback) => {
-      if (
-        permission === 'media' ||
-        permission === 'display-capture'
-      ) {
-        callback(true);
-        return;
-      }
+
+    (
+      webContents,
+      permission,
+      callback
+    ) => {
 
       callback(true);
+
+    }
+
+  );
+
+
+  /*
+  ==========================================================
+  CARREGA O SERVIDOR RENDER
+  ==========================================================
+  */
+
+  mainWindow.loadURL(
+    SCREENROOM_URL
+  );
+
+
+  /*
+  ==========================================================
+  ERROS
+  ==========================================================
+  */
+
+  mainWindow.webContents.on(
+    "render-process-gone",
+    (event, details) => {
+
+      console.error(
+        "Renderer encerrado:",
+        details
+      );
+
     }
   );
 
-  /*
-   * Carrega o ScreenRoom online.
-   */
-
-  win.loadURL('https://screenroom-01n7.onrender.com');
-
-  /*
-   * DevTools somente se precisar diagnosticar.
-   * Deixe comentado normalmente.
-   */
-
-  // win.webContents.openDevTools();
 }
 
 
 /*
- * ============================================================
- * OTIMIZAÇÕES
- * ============================================================
- */
+============================================================
+OTIMIZAÇÕES
+============================================================
+*/
 
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-zero-copy');
-app.commandLine.appendSwitch('ignore-gpu-blocklist');
-app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
+app.commandLine.appendSwitch(
+  "enable-gpu-rasterization"
+);
+
+app.commandLine.appendSwitch(
+  "enable-zero-copy"
+);
+
+app.commandLine.appendSwitch(
+  "ignore-gpu-blocklist"
+);
 
 
 /*
- * ============================================================
- * INICIALIZAÇÃO
- * ============================================================
- */
+============================================================
+INICIAR
+============================================================
+*/
 
 app.whenReady().then(() => {
+
   createWindow();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
 });
 
 
 /*
- * ============================================================
- * FECHAR
- * ============================================================
- */
+============================================================
+FECHAR
+============================================================
+*/
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
+app.on(
+  "window-all-closed",
+  () => {
+
+    if (
+      process.platform !== "darwin"
+    ) {
+
+      app.quit();
+
+    }
+
   }
-});
+);

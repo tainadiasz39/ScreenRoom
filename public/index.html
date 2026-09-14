@@ -1,53 +1,413 @@
 ﻿<!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Discord • ScreenRoom</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>ScreenRoom</title>
+
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
-body { background:#1e1f22; color:#dbdee1; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-.auth-box { background:#313338; border-radius:8px; width:100%; max-width:480px; padding:32px; box-shadow:0 8px 24px rgba(0,0,0,0.5); text-align:center; }
-.discord-logo { width:64px; height:64px; background:#5865f2; border-radius:20px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:2rem; }
-h1 { color:#f2f3f5; font-size:1.5rem; font-weight:700; margin-bottom:6px; }
-p { color:#949ba4; font-size:0.95rem; margin-bottom:24px; }
-.btn { width:100%; padding:14px; border-radius:4px; font-size:0.95rem; font-weight:600; border:none; cursor:pointer; margin-bottom:10px; transition:0.15s; }
-.btn-primary { background:#5865f2; color:#fff; }
-.btn-primary:hover { background:#4752c4; }
-.btn-secondary { background:#4e5058; color:#fff; }
-.btn-secondary:hover { background:#6d6f78; }
-.input-wrap { display:none; flex-direction:column; gap:8px; margin-top:16px; }
-.input-wrap.active { display:flex; }
-input { padding:12px; background:#1e1f22; border:1px solid #111214; border-radius:4px; color:#fff; font-size:0.95rem; outline:none; }
-input:focus { border-color:#5865f2; }
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+
+  margin: 0;
+
+  min-height: 100vh;
+
+  background:
+    radial-gradient(
+      circle at top,
+      #25273c 0%,
+      #1e1f22 45%,
+      #111214 100%
+    );
+
+  color: #f2f3f5;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+}
+
+.container {
+
+  width: min(460px, 92vw);
+
+  background: #2b2d31;
+
+  border-radius: 12px;
+
+  padding: 34px;
+
+  box-shadow:
+    0 20px 70px
+    rgba(0,0,0,.45);
+
+}
+
+.logo {
+
+  width: 70px;
+
+  height: 70px;
+
+  border-radius: 18px;
+
+  background: #5865f2;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 32px;
+
+  margin: 0 auto 20px;
+
+}
+
+h1 {
+
+  text-align: center;
+
+  margin: 0 0 8px;
+
+  font-size: 28px;
+
+}
+
+.subtitle {
+
+  text-align: center;
+
+  color: #b5bac1;
+
+  margin-bottom: 30px;
+
+  line-height: 1.5;
+
+}
+
+label {
+
+  display: block;
+
+  color: #b5bac1;
+
+  font-size: 12px;
+
+  font-weight: bold;
+
+  margin-bottom: 8px;
+
+  text-transform: uppercase;
+
+}
+
+input {
+
+  width: 100%;
+
+  height: 48px;
+
+  border: 0;
+
+  outline: none;
+
+  border-radius: 5px;
+
+  background: #1e1f22;
+
+  color: white;
+
+  padding: 0 14px;
+
+  font-size: 16px;
+
+  margin-bottom: 12px;
+
+}
+
+button {
+
+  width: 100%;
+
+  height: 48px;
+
+  border: 0;
+
+  border-radius: 5px;
+
+  background: #5865f2;
+
+  color: white;
+
+  font-weight: bold;
+
+  font-size: 15px;
+
+  cursor: pointer;
+
+  margin-top: 8px;
+
+}
+
+button:hover {
+
+  background: #4752c4;
+
+}
+
+.secondary {
+
+  background: #4e5058;
+
+}
+
+.secondary:hover {
+
+  background: #6d6f78;
+
+}
+
+.divider {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin: 24px 0;
+
+  color: #949ba4;
+
+  font-size: 12px;
+
+}
+
+.divider::before,
+.divider::after {
+
+  content: "";
+
+  height: 1px;
+
+  flex: 1;
+
+  background: #3f4147;
+
+}
+
+.error {
+
+  color: #f23f42;
+
+  font-size: 13px;
+
+  text-align: center;
+
+  margin-top: 12px;
+
+  display: none;
+
+}
+
 </style>
+
 </head>
+
 <body>
-<div class="auth-box">
-  <div class="discord-logo">🎮</div>
-  <h1>Screen Room</h1>
-  <p>Transmissão de tela 60 FPS com áudio cristalino e call em grupo</p>
-  <button class="btn btn-primary" onclick="createRoom()">Criar Sala</button>
-  <button class="btn btn-secondary" onclick="toggleJoin()">Entrar com Link / Código</button>
-  <div class="input-wrap" id="joinWrap">
-    <input type="text" id="roomInput" placeholder="Código ou link da sala...">
-    <button class="btn btn-primary" onclick="joinRoom()">Conectar</button>
+
+<div class="container">
+
+  <div class="logo">
+    🖥️
   </div>
+
+  <h1>ScreenRoom</h1>
+
+  <div class="subtitle">
+    Compartilhe sua tela com seus amigos<br>
+    em tempo real.
+  </div>
+
+
+  <label>
+    Criar uma sala
+  </label>
+
+  <button
+    onclick="createRoom()"
+  >
+    Criar nova sala
+  </button>
+
+
+  <div class="divider">
+    OU
+  </div>
+
+
+  <label>
+    Entrar em uma sala
+  </label>
+
+  <input
+    id="roomCode"
+    placeholder="Digite o código da sala"
+    maxlength="8"
+    autocomplete="off"
+  >
+
+  <button
+    class="secondary"
+    onclick="joinRoom()"
+  >
+    Entrar na sala
+  </button>
+
+
+  <div
+    class="error"
+    id="error"
+  ></div>
+
 </div>
+
+
 <script>
-function createRoom() {
-  fetch('/api/create-room', { method: 'POST' })
-    .then(r => r.json())
-    .then(d => window.location.href = '/room/' + d.roomId + '?role=host');
+
+function showError(message) {
+
+  const error =
+    document.getElementById("error");
+
+  error.textContent =
+    message;
+
+  error.style.display =
+    "block";
+
 }
-function toggleJoin() { document.getElementById('joinWrap').classList.toggle('active'); }
+
+
+async function createRoom() {
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/create-room",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          }
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error();
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    window.location.href =
+      "/room/" +
+      data.roomId +
+      "?role=host";
+
+
+  } catch {
+
+    showError(
+      "Não foi possível criar a sala."
+    );
+
+  }
+
+}
+
+
 function joinRoom() {
-  let v = document.getElementById('roomInput').value.trim().toUpperCase();
-  if (!v) return alert('Digite o link ou código');
-  if (v.includes('/ROOM/')) v = v.split('/ROOM/')[1].split('?')[0];
-  window.location.href = '/room/' + v + '?role=viewer';
+
+  const input =
+    document.getElementById(
+      "roomCode"
+    );
+
+
+  const room =
+    input.value
+      .trim()
+      .toUpperCase();
+
+
+  if (!room) {
+
+    showError(
+      "Digite o código da sala."
+    );
+
+    return;
+
+  }
+
+
+  window.location.href =
+    "/room/" +
+    encodeURIComponent(room) +
+    "?role=viewer";
+
 }
+
+
+document
+  .getElementById("roomCode")
+  .addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key === "Enter"
+      ) {
+
+        joinRoom();
+
+      }
+
+    }
+  );
+
 </script>
+
 </body>
 </html>
