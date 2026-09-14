@@ -42,42 +42,62 @@ io.on('connection', (socket) => {
       room.viewers.add(socket.id);
     }
 
+    // Avisa todos da sala sobre o status atual
     io.to(roomId).emit('room-status', {
       viewers: room.viewers.size + (room.hostId ? 1 : 0),
       isStreaming: room.isStreaming,
       hasHost: room.hostId !== null
     });
-
-    if (room.isStreaming && room.hostId && !isHost) {
-      io.to(room.hostId).emit('new-viewer', socket.id);
-    }
   });
 
-  socket.on('stream-state', ({ roomId, isStreaming }) => {
+  // Host avisa que começou a transmitir
+  socket.on('host-start-stream', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room) {
-      room.isStreaming = isStreaming;
+      room.isStreaming = true;
+      socket.to(roomId).emit('stream-started');
       io.to(roomId).emit('room-status', {
         viewers: room.viewers.size + (room.hostId ? 1 : 0),
-        isStreaming,
-        hasHost: room.hostId !== null
+        isStreaming: true,
+        hasHost: true
       });
-      if (isStreaming) {
-        socket.to(roomId).emit('stream-ready');
-      }
     }
   });
 
+  // Host avisa que parou
+  socket.on('host-stop-stream', ({ roomId }) => {
+    const room = rooms.get(roomId);
+    if (room) {
+      room.isStreaming = false;
+      socket.to(roomId).emit('stream-stopped');
+      io.to(roomId).emit('room-status', {
+        viewers: room.viewers.size + (room.hostId ? 1 : 0),
+        isStreaming: false,
+        hasHost: true
+      });
+    }
+  });
+
+  // Espectador pede a transmissão diretamente ao Host
   socket.on('request-stream', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room && room.hostId && room.isStreaming) {
-      io.to(room.hostId).emit('new-viewer', socket.id);
+      io.to(room.hostId).emit('viewer-wants-stream', { viewerId: socket.id });
     }
   });
 
-  socket.on('signal-offer', ({ to, offer }) => io.to(to).emit('signal-offer', { from: socket.id, offer }));
-  socket.on('signal-answer', ({ to, answer }) => io.to(to).emit('signal-answer', { from: socket.id, answer }));
-  socket.on('signal-ice', ({ to, candidate }) => io.to(to).emit('signal-ice', { from: socket.id, candidate }));
+  // Troca de Sinais WebRTC
+  socket.on('webrtc-offer', ({ to, offer }) => {
+    io.to(to).emit('webrtc-offer', { from: socket.id, offer });
+  });
+
+  socket.on('webrtc-answer', ({ to, answer }) => {
+    io.to(to).emit('webrtc-answer', { from: socket.id, answer });
+  });
+
+  socket.on('webrtc-ice', ({ to, candidate }) => {
+    io.to(to).emit('webrtc-ice', { from: socket.id, candidate });
+  });
 
   socket.on('disconnect', () => {
     const roomId = socket.roomId;

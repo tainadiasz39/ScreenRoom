@@ -37,7 +37,7 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 .toast { position:fixed; bottom:85px; left:50%; transform:translateX(-50%); background:#1f2937; border:1px solid #6366f1; color:#fff; padding:10px 20px; border-radius:25px; font-size:0.85rem; opacity:0; transition:0.3s; pointer-events:none; z-index:100; }
 .toast.show { opacity:1; }
 
-/* ================= MODAL ESTILO DISCORD ================= */
+/* MODAL SELEÇÃO DISCORD */
 .modal-overlay {
   position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
   display:none; align-items:center; justify-content:center; z-index:1000;
@@ -46,20 +46,16 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 .discord-modal {
   background:#313338; width:90%; max-width:480px; border-radius:8px;
   box-shadow:0 8px 24px rgba(0,0,0,0.5); overflow:hidden;
-  animation: modalScale 0.15s ease-out;
 }
-@keyframes modalScale { from { transform:scale(0.95); opacity:0; } to { transform:scale(1); opacity:1; } }
 .modal-header { padding:24px 16px 8px; text-align:center; }
 .modal-header h2 { font-size:1.25rem; font-weight:700; color:#f2f3f5; }
 .modal-header p { font-size:0.85rem; color:#b5bac1; margin-top:4px; }
 .modal-body { padding:16px; }
-
 .share-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
 .share-opt-card {
   background:#2b2d31; border:2px solid transparent; border-radius:8px;
   padding:16px; text-align:center; cursor:pointer; transition:0.15s;
 }
-.share-opt-card:hover { background:#35373c; }
 .share-opt-card.active { border-color:#5865f2; background:#383a40; }
 .share-opt-card .icon { font-size:2rem; margin-bottom:8px; }
 .share-opt-card .title { font-size:0.9rem; font-weight:700; color:#fff; }
@@ -69,8 +65,6 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
   background:#1e1f22; border-radius:8px; padding:12px;
   display:flex; align-items:center; gap:12px; font-size:0.8rem; line-height:1.4; color:#b5bac1;
 }
-.audio-guide-box .warning-icon { font-size:1.5rem; }
-
 .modal-footer {
   background:#2b2d31; padding:16px; display:flex; justify-content:flex-end; gap:12px;
 }
@@ -79,7 +73,6 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
   border:none; cursor:pointer; transition:0.2s;
 }
 .modal-btn-cancel { background:transparent; color:#fff; }
-.modal-btn-cancel:hover { text-decoration:underline; }
 .modal-btn-primary { background:#5865f2; color:#fff; }
 .modal-btn-primary:hover { background:#4752c4; }
 </style>
@@ -99,12 +92,12 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 </div>
 
 <div class="stage" id="stageArea">
-  <button class="unmute-banner" id="unmuteBtn" onclick="enableAudio()">🔊 Clique para Ouvir a Transmissão</button>
+  <button class="unmute-banner" id="unmuteBtn" onclick="enableAudio()">🔊 Clique para Ativar o Áudio</button>
   
   <div id="emptyState" style="text-align:center; color:#94a3b8;">
     <div style="font-size:3.5rem;">🖥️</div>
     <h3 style="color:#fff; margin:6px 0;" id="emptyTitle">Aguardando Transmissão</h3>
-    <p style="font-size:0.85rem;">O host ainda não iniciou a tela.</p>
+    <p style="font-size:0.85rem;" id="emptySub">O host ainda não iniciou a tela.</p>
   </div>
   <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
 </div>
@@ -112,6 +105,7 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 <div class="dock-bar">
   <div style="display:flex; gap:8px;">
     <button class="dbtn pri" id="btnStream" onclick="openDiscordModal()" style="display:none;">📡 Compartilhar Tela</button>
+    <button class="dbtn" id="btnReconnect" onclick="requestStreamFromHost()" style="display:none;">🔄 Reconectar</button>
   </div>
   <div style="display:flex; gap:10px; align-items:center;">
     <button class="dbtn" id="btnMute" onclick="toggleMute()">🔊 Som</button>
@@ -121,12 +115,12 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
   </div>
 </div>
 
-<!-- ================= MODAL ESTILO DISCORD ================= -->
+<!-- MODAL DISCORD -->
 <div class="modal-overlay" id="discordModal">
   <div class="discord-modal">
     <div class="modal-header">
       <h2>Compartilhe sua tela</h2>
-      <p>Escolha o modo de transmissão ideal para sua gameplay</p>
+      <p>Escolha como deseja transmitir</p>
     </div>
     <div class="modal-body">
       <div class="share-options">
@@ -137,20 +131,20 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
         </div>
         <div class="share-opt-card" onclick="selectShareOpt('window')" id="optWindow">
           <div class="icon">🎮</div>
-          <div class="title">Janelas do App</div>
-          <div class="sub">Foco (Apenas Vídeo)</div>
+          <div class="title">Janela</div>
+          <div class="sub">Foco no App</div>
         </div>
       </div>
       <div class="audio-guide-box">
-        <div class="warning-icon">🔊</div>
+        <div style="font-size:1.5rem;">🔊</div>
         <div id="audioGuideText">
-          <strong>Dica do Som:</strong> Para transmitir o áudio do jogo, selecione "Tela Inteira" e lembre-se de marcar a caixinha <strong>"Compartilhar áudio do sistema"</strong> no pop-up do navegador!
+          Para transmitir o áudio do jogo, escolha <strong>"Tela Inteira"</strong> e marque a caixinha <strong>"Compartilhar áudio do sistema"</strong> no pop-up!
         </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="modal-btn modal-btn-cancel" onclick="closeDiscordModal()">Cancelar</button>
-      <button class="modal-btn modal-btn-primary" onclick="startDiscordStream()">Go Live</button>
+      <button class="modal-btn modal-btn-primary" onclick="startStream()">Go Live</button>
     </div>
   </div>
 </div>
@@ -170,11 +164,13 @@ const emptyState = document.getElementById('emptyState');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const unmuteBtn = document.getElementById('unmuteBtn');
+const btnReconnect = document.getElementById('btnReconnect');
 
 let localStream = null;
-let peerConnections = {};
-let iceCandidatesQueue = {};
-let selectedStreamType = 'screen'; // 'screen' ou 'window'
+let peerConnections = {}; // [viewerId]: RTCPeerConnection
+let viewerPC = null;
+let iceQueue = {};
+let selectedType = 'screen';
 
 const rtcConfig = {
   iceServers: [
@@ -205,50 +201,34 @@ socket.emit('join-room', { roomId, isHost: (role === 'host') });
 if (role === 'host') {
   document.getElementById('btnStream').style.display = 'inline-flex';
   document.getElementById('emptyTitle').textContent = 'Você é o Host';
-  document.getElementById('emptySub').textContent = 'Clique em "Compartilhar Tela" para escolher o seu jogo.';
+  document.getElementById('emptySub').textContent = 'Clique em "Compartilhar Tela" para iniciar.';
   setStatus('Host Pronto', true);
+} else {
+  btnReconnect.style.display = 'inline-flex';
 }
 
-// ======================== MODAL DISCORD LOGIC ========================
+// ======================== MODAL ========================
 function openDiscordModal() {
-  if (localStream) {
-    // Se já estiver transmitindo, apenas para
-    stopStreaming();
-  } else {
-    document.getElementById('discordModal').classList.add('active');
-  }
+  if (localStream) stopStream();
+  else document.getElementById('discordModal').classList.add('active');
 }
-
 function closeDiscordModal() {
   document.getElementById('discordModal').classList.remove('active');
 }
-
 function selectShareOpt(type) {
-  selectedStreamType = type;
+  selectedType = type;
   document.getElementById('optScreen').classList.toggle('active', type === 'screen');
   document.getElementById('optWindow').classList.toggle('active', type === 'window');
-  
-  const guide = document.getElementById('audioGuideText');
-  if (type === 'screen') {
-    guide.innerHTML = '<strong>Dica do Som:</strong> Selecione "Tela Inteira" e lembre-se de marcar a caixinha <strong>"Compartilhar áudio do sistema"</strong> no pop-up do navegador!';
-  } else {
-    guide.innerHTML = '<strong>Aviso do Som:</strong> Transmitir apenas uma "Janela" isolada do Windows silencia o áudio devido a limitações do sistema operacional. Para som, use "Tela Inteira"!';
-  }
 }
 
-async function startDiscordStream() {
+// ======================== HOST LOGIC ========================
+async function startStream() {
   closeDiscordModal();
   try {
-    const displayMediaOptions = {
+    localStream = await navigator.mediaDevices.getDisplayMedia({
       video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: selectedStreamType === 'screen' ? {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
-      } : false
-    };
-
-    localStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+      audio: selectedType === 'screen' ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false } : false
+    });
 
     video.srcObject = localStream;
     video.muted = true;
@@ -260,15 +240,15 @@ async function startDiscordStream() {
     btn.innerHTML = '⏹️ Parar Transmissão';
     setStatus('Ao Vivo (60 FPS)', true);
 
-    socket.emit('stream-state', { roomId, isStreaming: true });
+    socket.emit('host-start-stream', { roomId });
 
-    localStream.getVideoTracks()[0].onended = () => stopStreaming();
+    localStream.getVideoTracks()[0].onended = () => stopStream();
   } catch (err) {
     showToast('Transmissão cancelada');
   }
 }
 
-function stopStreaming() {
+function stopStream() {
   if (localStream) {
     localStream.getTracks().forEach(t => t.stop());
     localStream = null;
@@ -281,14 +261,14 @@ function stopStreaming() {
   btn.innerHTML = '📡 Compartilhar Tela';
   setStatus('Transmissão Parada', false);
 
-  socket.emit('stream-state', { roomId, isStreaming: false });
+  socket.emit('host-stop-stream', { roomId });
 
   for (let id in peerConnections) peerConnections[id].close();
   peerConnections = {};
 }
 
-// ======================== WEBRTC MESH ========================
-socket.on('new-viewer', async (viewerId) => {
+// Host cria conexão individual para cada espectador
+socket.on('viewer-wants-stream', async ({ viewerId }) => {
   if (!localStream) return;
   if (peerConnections[viewerId]) peerConnections[viewerId].close();
 
@@ -298,39 +278,41 @@ socket.on('new-viewer', async (viewerId) => {
   localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
   pc.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('signal-ice', { to: viewerId, candidate: e.candidate });
+    if (e.candidate) socket.emit('webrtc-ice', { to: viewerId, candidate: e.candidate });
   };
 
   const offer = await pc.createOffer();
-  // Força áudio Stereo de alta qualidade no SDP
-  offer.sdp = offer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;stereo=1;sprop-stereo=1;maxaveragebitrate=128000");
-  
   await pc.setLocalDescription(offer);
-  socket.emit('signal-offer', { to: viewerId, offer });
+  socket.emit('webrtc-offer', { to: viewerId, offer });
 });
 
-socket.on('signal-answer', async ({ from, answer }) => {
+socket.on('webrtc-answer', async ({ from, answer }) => {
   const pc = peerConnections[from];
-  if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
-});
-
-socket.on('signal-ice', async ({ from, candidate }) => {
-  const pc = (role === 'host') ? peerConnections[from] : window.viewerPC;
-  if (pc && pc.remoteDescription) {
-    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
-  } else {
-    if (!iceCandidatesQueue[from]) iceCandidatesQueue[from] = [];
-    iceCandidatesQueue[from].push(candidate);
+  if (pc) {
+    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    if (iceQueue[from]) {
+      for (const cand of iceQueue[from]) await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{});
+      delete iceQueue[from];
+    }
   }
 });
 
-socket.on('signal-offer', async ({ from, offer }) => {
-  if (window.viewerPC) window.viewerPC.close();
+// ======================== VIEWER LOGIC ========================
+function requestStreamFromHost() {
+  showToast('Sincronizando com o Host...');
+  socket.emit('request-stream', { roomId });
+}
 
-  const pc = new RTCPeerConnection(rtcConfig);
-  window.viewerPC = pc;
+socket.on('stream-started', () => {
+  requestStreamFromHost();
+});
 
-  pc.ontrack = (event) => {
+socket.on('webrtc-offer', async ({ from, offer }) => {
+  if (viewerPC) viewerPC.close();
+
+  viewerPC = new RTCPeerConnection(rtcConfig);
+
+  viewerPC.ontrack = (event) => {
     if (event.streams && event.streams[0]) {
       video.srcObject = event.streams[0];
     } else {
@@ -342,7 +324,6 @@ socket.on('signal-offer', async ({ from, offer }) => {
     emptyState.style.display = 'none';
     setStatus('Ao Vivo', true);
 
-    // Tenta reproduzir o som automaticamente
     video.play().then(() => {
       unmuteBtn.style.display = 'none';
     }).catch(() => {
@@ -352,28 +333,37 @@ socket.on('signal-offer', async ({ from, offer }) => {
     });
   };
 
-  pc.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('signal-ice', { to: from, candidate: e.candidate });
+  viewerPC.onicecandidate = (e) => {
+    if (e.candidate) socket.emit('webrtc-ice', { to: from, candidate: e.candidate });
   };
 
-  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  await viewerPC.setRemoteDescription(new RTCSessionDescription(offer));
 
-  if (iceCandidatesQueue[from]) {
-    for (const cand of iceCandidatesQueue[from]) {
-      await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-    }
-    delete iceCandidatesQueue[from];
+  if (iceQueue[from]) {
+    for (const cand of iceQueue[from]) await viewerPC.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{});
+    delete iceQueue[from];
   }
 
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  socket.emit('signal-answer', { to: from, answer });
+  const answer = await viewerPC.createAnswer();
+  await viewerPC.setLocalDescription(answer);
+  socket.emit('webrtc-answer', { to: from, answer });
 });
 
-socket.on('stream-ready', () => {
-  if (role !== 'host') {
-    socket.emit('request-stream', { roomId });
+socket.on('webrtc-ice', async ({ from, candidate }) => {
+  const pc = (role === 'host') ? peerConnections[from] : viewerPC;
+  if (pc && pc.remoteDescription) {
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e){}
+  } else {
+    if (!iceQueue[from]) iceQueue[from] = [];
+    iceQueue[from].push(candidate);
   }
+});
+
+socket.on('stream-stopped', () => {
+  video.style.display = 'none';
+  emptyState.style.display = 'block';
+  setStatus('Transmissão Pausada', false);
+  unmuteBtn.style.display = 'none';
 });
 
 socket.on('host-left', () => {
@@ -385,8 +375,10 @@ socket.on('host-left', () => {
 
 socket.on('room-status', (d) => {
   document.getElementById('viewerCount').textContent = d.viewers;
-  if (role !== 'host' && d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
-    socket.emit('request-stream', { roomId });
+  if (role !== 'host') {
+    if (d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
+      requestStreamFromHost();
+    }
   }
 });
 
@@ -398,27 +390,20 @@ function enableAudio() {
   document.getElementById('btnMute').textContent = '🔊 Som';
   unmuteBtn.style.display = 'none';
 }
-
 function setVolume(v) {
   video.volume = v / 100;
   video.muted = (v == 0);
   document.getElementById('btnMute').textContent = (v == 0) ? '🔇 Mudo' : '🔊 Som';
 }
-
 function toggleMute() {
   video.muted = !video.muted;
   document.getElementById('btnMute').textContent = video.muted ? '🔇 Mudo' : '🔊 Som';
 }
-
 function toggleFullscreen() {
   const stage = document.getElementById('stageArea');
-  if (!document.fullscreenElement) {
-    stage.requestFullscreen().catch(() => {});
-  } else {
-    document.exitFullscreen().catch(() => {});
-  }
+  if (!document.fullscreenElement) stage.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
 }
-
 function copyLink() {
   const url = window.location.origin + '/room/' + roomId + '?role=viewer';
   navigator.clipboard.writeText(url).then(() => showToast('📋 Link copiado com sucesso!'));
