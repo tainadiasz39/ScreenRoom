@@ -628,8 +628,124 @@ async function toggleFullscreen() {
   } catch {}
 }
 </script>
-</body>
+<style id="layoutFinal">
+main{
+  display:grid !important;
+  grid-template-columns:minmax(0, 1fr) 380px !important;
+  grid-template-rows:auto auto !important;
+  gap:18px !important;
+  align-items:start !important;
+}
+
+.stage{
+  grid-column:1 !important;
+  grid-row:1 !important;
+  min-height:55vh !important;
+}
+
+#streamControls{
+  grid-column:1 !important;
+  grid-row:2 !important;
+  display:flex !important;
+  align-items:center !important;
+  flex-wrap:wrap !important;
+  gap:8px !important;
+  margin:0 !important;
+}
+
+.sidePanels{
+  grid-column:2 !important;
+  grid-row:1 / span 2 !important;
+  display:block !important;
+  width:100% !important;
+  margin:0 !important;
+}
+
+.sidePanels .panel{
+  width:100% !important;
+  margin:0 0 14px 0 !important;
+}
+
+.chat{
+  height:130px !important;
+}
+
+@media(max-width:1000px){
+  main{
+    display:block !important;
+  }
+
+  #streamControls,
+  .sidePanels{
+    width:100% !important;
+    margin-top:18px !important;
+  }
+}
+</style>
+
+<script id="layoutFinalScript">
+window.addEventListener("DOMContentLoaded", () => {
+  const main = document.querySelector("main");
+  const stage = document.getElementById("stage");
+  const hostPanel = document.getElementById("hostControls");
+  const viewerPanel = document.getElementById("viewerControls");
+  const chatMessages = document.getElementById("chatMessages");
+  const resolution = document.getElementById("resolution");
+  const streamButton = document.getElementById("streamButton");
+  const fullscreenButton = document.querySelector(
+    '[onclick="toggleFullscreen()"]'
+  );
+
+  if (!main || !stage) return;
+
+  let sidePanels = document.querySelector(".sidePanels");
+
+  if (!sidePanels) {
+    sidePanels = document.createElement("div");
+    sidePanels.className = "sidePanels";
+    main.append(sidePanels);
+  }
+
+  let streamControls = document.getElementById("streamControls");
+
+  if (!streamControls) {
+    streamControls = document.createElement("section");
+    streamControls.id = "streamControls";
+    streamControls.className = "panel";
+    stage.insertAdjacentElement("afterend", streamControls);
+  }
+
+  if (resolution && resolution.parentElement) {
+    streamControls.append(resolution.parentElement);
+  }
+
+  if (streamButton) {
+    streamControls.append(streamButton);
+  }
+
+  if (fullscreenButton) {
+    streamControls.append(fullscreenButton);
+  }
+
+  if (hostPanel) {
+    sidePanels.append(hostPanel);
+  }
+
+  if (chatMessages) {
+    const chatPanel = chatMessages.closest("section.panel");
+
+    if (chatPanel) {
+      sidePanels.append(chatPanel);
+    }
+  }
+
+  if (viewerPanel) {
+    streamControls.append(viewerPanel);
+  }
+});
+</script></body>
 </html>
+
 
 
 
