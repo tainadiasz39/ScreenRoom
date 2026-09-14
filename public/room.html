@@ -3,103 +3,343 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ScreenRoom • Live HD</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>Discord • ScreenRoom</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
-body { background:#080a11; color:#f1f5f9; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; user-select:none; }
+body { background:#1e1f22; color:#dbdee1; height:100vh; display:flex; overflow:hidden; }
 
-.topbar { height:56px; background:rgba(13,17,28,0.95); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
-.status-pill { display:flex; align-items:center; gap:8px; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:6px 14px; border-radius:20px; font-weight:700; }
-.dot { width:8px; height:8px; border-radius:50%; background:#eab308; }
-.dot.live { background:#22c55e; box-shadow:0 0 10px #22c55e; }
-
-.stage { flex:1; display:flex; align-items:center; justify-content:center; background:#06080e; padding:12px; position:relative; overflow:hidden; }
-video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:contain; border-radius:14px; background:#000; box-shadow:0 20px 50px rgba(0,0,0,0.8); }
-.stage:fullscreen video { max-height:100vh; width:100vw; border-radius:0; }
-
-.audio-alert {
-  position:absolute; top:20px; left:50%; transform:translateX(-50%);
-  padding:10px 22px; border-radius:30px; font-weight:700; font-size:0.85rem;
-  z-index:60; display:none; box-shadow:0 8px 25px rgba(0,0,0,0.6);
+/* ================= 1. BARRA DE SERVIDORES (GUILD BAR - 72px) ================= */
+.guild-bar {
+  width:72px; background:#1e1f22; display:flex; flex-direction:column; align-items:center;
+  padding:12px 0; gap:8px; flex-shrink:0; border-right:1px solid rgba(0,0,0,0.2);
 }
-.audio-alert.green { background:#10b981; color:#fff; }
-.audio-alert.red { background:#ef4444; color:#fff; cursor:pointer; }
+.guild-icon {
+  width:48px; height:48px; border-radius:50%; background:#313338; color:#dbdee1;
+  display:flex; align-items:center; justify-content:center; font-size:1.4rem; cursor:pointer;
+  transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position:relative;
+}
+.guild-icon:hover { border-radius:16px; background:#5865f2; color:#fff; }
+.guild-icon.active { border-radius:16px; background:#5865f2; color:#fff; }
+.guild-icon.active::before {
+  content:''; position:absolute; left:-12px; width:4px; height:40px; background:#fff; border-radius:0 4px 4px 0;
+}
+.guild-sep { width:32px; height:2px; background:#35363c; border-radius:1px; margin:4px 0; }
 
-.watch-overlay {
-  position:absolute; inset:0; background:rgba(8,10,17,0.88); backdrop-filter:blur(10px);
+/* ================= 2. CANAIS & PAINEL DE USUÁRIO (240px) ================= */
+.sidebar {
+  width:240px; background:#2b2d31; display:flex; flex-direction:column; flex-shrink:0;
+}
+.server-header {
+  height:48px; padding:0 16px; display:flex; align-items:center; justify-content:space-between;
+  font-weight:700; font-size:0.95rem; color:#f2f3f5; border-bottom:1px solid #1f2023; box-shadow:0 1px 2px rgba(0,0,0,0.2);
+}
+.channels-list { flex:1; overflow-y:auto; padding:12px 8px; display:flex; flex-direction:column; gap:2px; }
+.category-title { font-size:0.75rem; font-weight:700; color:#949ba4; text-transform:uppercase; letter-spacing:0.02em; padding:8px 8px 4px; display:flex; align-items:center; justify-content:space-between; }
+.channel-item {
+  display:flex; align-items:center; gap:8px; padding:8px; border-radius:4px; color:#949ba4; cursor:pointer; font-weight:500; font-size:0.95rem;
+  transition:all 0.1s;
+}
+.channel-item:hover { background:#35373c; color:#dbdee1; }
+.channel-item.active { background:#35373c; color:#fff; }
+
+/* Lista de quem está na Call de Voz */
+.voice-members-list { margin-left:24px; display:flex; flex-direction:column; gap:2px; margin-top:2px; margin-bottom:8px; }
+.voice-member-item {
+  display:flex; align-items:center; gap:8px; padding:4px 8px; border-radius:4px; font-size:0.85rem; color:#949ba4;
+}
+.voice-avatar {
+  width:24px; height:24px; border-radius:50%; background:#5865f2; color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700;
+  border:2px solid transparent; transition:border-color 0.1s;
+}
+.voice-member-item.speaking .voice-avatar { border-color:#23a55a; box-shadow:0 0 8px #23a55a; }
+.voice-member-item.speaking .name { color:#fff; }
+
+/* Painel do Usuário (Canto Inferior Esquerdo do Discord) */
+.user-panel {
+  height:52px; background:#232428; padding:0 8px; display:flex; align-items:center; justify-content:space-between;
+}
+.user-profile { display:flex; align-items:center; gap:8px; max-width:110px; cursor:pointer; padding:4px; border-radius:4px; }
+.user-profile:hover { background:#35373c; }
+.user-p-avatar { width:32px; height:32px; border-radius:50%; background:#5865f2; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem; position:relative; }
+.online-dot { width:10px; height:10px; background:#23a55a; border-radius:50%; border:2px solid #232428; position:absolute; bottom:-1px; right:-1px; }
+.user-p-info { overflow:hidden; }
+.user-p-name { font-size:0.85rem; font-weight:600; color:#f2f3f5; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+.user-p-tag { font-size:0.7rem; color:#949ba4; }
+
+.user-tools { display:flex; align-items:center; gap:2px; }
+.tool-btn { width:32px; height:32px; border-radius:4px; background:transparent; border:none; color:#b5bac1; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.1rem; }
+.tool-btn:hover { background:#35373c; color:#dbdee1; }
+.tool-btn.muted { color:#f23f42; }
+
+/* Barra de Voz Conectada (Acima do painel de usuário) */
+.rtc-connected-bar {
+  height:36px; background:#2b2d31; border-top:1px solid rgba(0,0,0,0.2);
+  display:none; align-items:center; justify-content:space-between; padding:0 12px;
+}
+.rtc-status { display:flex; align-items:center; gap:6px; font-size:0.8rem; font-weight:700; color:#23a55a; }
+.btn-disconnect-voice { background:none; border:none; color:#f23f42; cursor:pointer; font-size:1rem; }
+
+/* ================= 3. ÁREA PRINCIPAL DA TRANSMISSÃO / STAGE ================= */
+.main-stage {
+  flex:1; display:flex; flex-direction:column; background:#313338; overflow:hidden; position:relative;
+}
+
+/* Header Superior do Canal */
+.channel-header {
+  height:48px; padding:0 16px; display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid #1f2023; background:#313338; flex-shrink:0;
+}
+.ch-title { display:flex; align-items:center; gap:8px; font-weight:700; color:#f2f3f5; font-size:1rem; }
+.badge-live {
+  background:#f23f42; color:#fff; font-size:0.7rem; font-weight:800; padding:2px 6px; border-radius:4px;
+  display:none; align-items:center; gap:4px; text-transform:uppercase;
+}
+.ch-actions { display:flex; align-items:center; gap:16px; color:#b5bac1; }
+
+/* Palco de Vídeo */
+.stage-content {
+  flex:1; display:flex; align-items:center; justify-content:center; background:#111214; padding:16px; position:relative; overflow:hidden;
+}
+video {
+  width:100%; height:100%; max-height:calc(100vh - 160px); object-fit:contain; border-radius:8px; background:#000; box-shadow:0 8px 24px rgba(0,0,0,0.8);
+}
+.stage-content:fullscreen video { max-height:100vh; width:100vw; border-radius:0; }
+
+/* Card de Espera Wumpus / Stream Offline */
+.stream-placeholder {
+  display:flex; flex-direction:column; align-items:center; text-align:center; max-width:420px; gap:12px;
+}
+.wumpus-icon { width:80px; height:80px; background:#2b2d31; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2.5rem; }
+.stream-placeholder h2 { color:#f2f3f5; font-size:1.3rem; font-weight:700; }
+.stream-placeholder p { color:#949ba4; font-size:0.95rem; }
+
+/* Overlay de Assistir Transmissão (Grande no Meio) */
+.watch-stream-overlay {
+  position:absolute; inset:0; background:rgba(17,18,20,0.92); backdrop-filter:blur(8px);
   display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:50;
 }
-.btn-watch {
-  background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border:none;
-  padding:18px 36px; border-radius:18px; font-size:1.15rem; font-weight:800; cursor:pointer;
-  box-shadow:0 15px 35px rgba(99,102,241,0.5); display:flex; align-items:center; gap:12px;
-  animation:pulseBtn 2s infinite; transition:transform 0.2s;
+.watch-stream-overlay.active { display:flex; }
+.stream-live-banner { background:#5865f2; color:#fff; width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2.2rem; box-shadow:0 0 30px rgba(88,101,242,0.6); }
+.btn-watch-discord {
+  padding:14px 36px; background:#5865f2; color:#fff; border:none; border-radius:4px; font-weight:700; font-size:1rem; cursor:pointer;
+  box-shadow:0 4px 15px rgba(88,101,242,0.4); display:flex; align-items:center; gap:10px; transition:0.15s;
 }
-.btn-watch:hover { transform:scale(1.05); }
-@keyframes pulseBtn { 0%,100%{box-shadow:0 15px 35px rgba(99,102,241,0.5);} 50%{box-shadow:0 20px 50px rgba(99,102,241,0.8);} }
+.btn-watch-discord:hover { background:#4752c4; transform:scale(1.03); }
 
-.dock-bar { height:68px; background:#0d111c; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 18px; flex-shrink:0; }
-.dbtn { background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.1); padding:9px 16px; border-radius:12px; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s; }
-.dbtn:hover { background:rgba(255,255,255,0.15); transform:translateY(-1px); }
-.dbtn.pri { background:linear-gradient(135deg,#6366f1,#4f46e5); border:none; }
-.dbtn.danger { background:#ef4444; border:none; }
-.dbtn.watch { background:#10b981; border:none; color:#fff; }
+/* Barra Flutuante de Controles da Transmissão (Hover no vídeo) */
+.stream-control-bar {
+  height:56px; background:#2b2d31; border-top:1px solid #1f2023; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0;
+}
+.ctrl-left { display:flex; align-items:center; gap:10px; }
+.ctrl-center { display:flex; align-items:center; gap:8px; }
+.ctrl-right { display:flex; align-items:center; gap:8px; }
 
-.vslider { -webkit-appearance:none; width:90px; height:5px; border-radius:5px; background:rgba(255,255,255,0.2); outline:none; cursor:pointer; }
-.vslider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#6366f1; cursor:pointer; }
+.d-btn {
+  height:36px; padding:0 16px; border-radius:4px; font-weight:600; font-size:0.88rem; border:none; cursor:pointer;
+  display:flex; align-items:center; gap:8px; transition:0.15s;
+}
+.d-btn-primary { background:#5865f2; color:#fff; }
+.d-btn-primary:hover { background:#4752c4; }
+.d-btn-danger { background:#da373c; color:#fff; }
+.d-btn-danger:hover { background:#b82e33; }
+.d-btn-secondary { background:#4e5058; color:#fff; }
+.d-btn-secondary:hover { background:#6d6f78; }
 
-.toast { position:fixed; bottom:85px; left:50%; transform:translateX(-50%); background:#1f2937; border:1px solid #6366f1; color:#fff; padding:10px 20px; border-radius:25px; font-size:0.85rem; opacity:0; transition:0.3s; pointer-events:none; z-index:100; }
-.toast.show { opacity:1; }
+.vol-control { display:flex; align-items:center; gap:8px; background:#1e1f22; padding:4px 10px; border-radius:4px; }
+.vol-slider { -webkit-appearance:none; width:80px; height:4px; border-radius:2px; background:#4e5058; outline:none; }
+.vol-slider::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:#fff; cursor:pointer; }
+
+/* ================= 4. CHAT LATERAL DIREITO (280px) ================= */
+.chat-sidebar {
+  width:0; background:#313338; border-left:1px solid #232428; display:flex; flex-direction:column; transition:width 0.2s ease; overflow:hidden; flex-shrink:0;
+}
+.chat-sidebar.open { width:300px; }
+.chat-head { height:48px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #232428; font-weight:700; color:#f2f3f5; }
+.chat-msgs { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+.chat-msg { display:flex; gap:12px; font-size:0.9rem; line-height:1.4; }
+.c-avatar { width:36px; height:36px; border-radius:50%; background:#5865f2; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem; flex-shrink:0; }
+.c-body .header { display:flex; align-items:baseline; gap:8px; margin-bottom:2px; }
+.c-body .name { font-weight:600; color:#f2f3f5; font-size:0.9rem; }
+.c-body .time { font-size:0.7rem; color:#949ba4; }
+.c-body .text { color:#dbdee1; word-break:break-word; }
+
+.chat-input-box { padding:0 16px 16px; }
+.chat-input-wrap { background:#383a40; border-radius:8px; padding:0 12px; display:flex; align-items:center; }
+.chat-input-wrap input { width:100%; height:44px; background:transparent; border:none; color:#f2f3f5; font-size:0.95rem; outline:none; }
+
+/* ================= 5. MODAL DISCORD "GO LIVE" ================= */
+.discord-modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; z-index:1000;
+}
+.discord-modal-overlay.active { display:flex; }
+.discord-modal-card {
+  background:#313338; width:90%; max-width:440px; border-radius:8px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,0.6);
+}
+.dm-header { padding:24px 20px 8px; text-align:center; }
+.dm-header h2 { color:#f2f3f5; font-size:1.3rem; font-weight:700; }
+.dm-body { padding:16px 20px; display:flex; flex-direction:column; gap:14px; }
+.dm-audio-alert {
+  background:#2b2d31; padding:12px; border-radius:6px; border-left:4px solid #5865f2;
+  font-size:0.85rem; color:#dbdee1; line-height:1.4;
+}
+.dm-footer { padding:16px 20px; background:#2b2d31; display:flex; justify-content:flex-end; gap:12px; }
+
+.toast-msg {
+  position:fixed; bottom:70px; left:50%; transform:translateX(-50%); background:#111214; border:1px solid #383a40; color:#fff;
+  padding:10px 20px; border-radius:6px; font-size:0.9rem; font-weight:600; opacity:0; pointer-events:none; transition:0.2s; z-index:2000;
+}
+.toast-msg.show { opacity:1; }
+#voiceAudiosContainer { display:none; }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div style="display:flex; align-items:center; gap:10px;">
-    <button class="dbtn" onclick="location.href='/'">←</button>
-    <span id="roomTitle" style="font-weight:700;">Sala</span>
-    <div class="status-pill">
-      <div class="dot" id="statusDot"></div>
-      <span id="statusText">Aguardando</span>
+<!-- 1. GUILD BAR (Esquerda) -->
+<div class="guild-bar">
+  <div class="guild-icon active" title="Discord ScreenRoom">🎮</div>
+  <div class="guild-sep"></div>
+  <div class="guild-icon" onclick="copyRoomLink()" title="Convidar Amigo (Copiar Link)">➕</div>
+</div>
+
+<!-- 2. CANAIS & CONTROLES DE USUÁRIO -->
+<div class="sidebar">
+  <div class="server-header">
+    <span id="serverTitle">Screen Room</span>
+    <span style="font-size:0.8rem; color:#949ba4;">▼</span>
+  </div>
+
+  <div class="channels-list">
+    <div class="category-title">Canais de Voz</div>
+    
+    <div class="channel-item active" onclick="joinVoiceChannel()">
+      <span>🔊</span> <span>Geral</span>
+    </div>
+
+    <!-- Lista de Usuários na Call -->
+    <div class="voice-members-list" id="voiceMembersContainer"></div>
+
+    <div class="category-title" style="margin-top:12px;">Canais de Texto</div>
+    <div class="channel-item" onclick="toggleChatSidebar()">
+      <span>💬</span> <span>chat-geral</span>
     </div>
   </div>
-  <span style="font-size:0.85rem; color:#94a3b8;">👥 <span id="viewerCount">0</span> online</span>
-</div>
 
-<div class="stage" id="stageArea">
-  <div class="audio-alert" id="audioAlert"></div>
-
-  <div class="watch-overlay" id="watchOverlay">
-    <div style="font-size:3rem;">🎮</div>
-    <div style="font-size:1.3rem; font-weight:800; color:#fff;">Transmissão Ao Vivo</div>
-    <p style="color:#94a3b8; font-size:0.9rem;">Clique no botão abaixo para assistir com imagem 60 FPS e som do jogo.</p>
-    <button class="btn-watch" onclick="startWatching()">▶️ Assistir Transmissão</button>
+  <!-- Barra de Voz Conectada -->
+  <div class="rtc-connected-bar" id="rtcConnectedBar">
+    <div class="rtc-status">
+      <span>🟢</span> <span>Voz Conectada</span>
+    </div>
+    <button class="btn-disconnect-voice" onclick="leaveVoiceChannel()" title="Desconectar da Call">📴</button>
   </div>
 
-  <div id="emptyState" style="text-align:center; color:#94a3b8;">
-    <div style="font-size:3.5rem;">🖥️</div>
-    <h3 style="color:#fff; margin:6px 0;" id="emptyTitle">Aguardando Transmissão</h3>
-    <p style="font-size:0.85rem;">O host ainda não iniciou a tela.</p>
-  </div>
-  <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
-  <audio id="screenAudio" autoplay playsinline style="display:none;"></audio>
-</div>
-
-<div class="dock-bar">
-  <div style="display:flex; gap:8px;">
-    <button class="dbtn pri" id="btnStream" onclick="toggleStream()" style="display:none;">📡 Transmitir Tela</button>
-    <button class="dbtn watch" id="btnDockWatch" onclick="startWatching()" style="display:none;">📺 Assistir</button>
-  </div>
-  <div style="display:flex; gap:10px; align-items:center;">
-    <button class="dbtn" id="btnMute" onclick="toggleMute()">🔊 Som</button>
-    <input type="range" class="vslider" id="volSlider" min="0" max="100" value="100" oninput="setVolume(this.value)">
-    <button class="dbtn" onclick="toggleFullscreen()">⛶ Tela Cheia</button>
-    <button class="dbtn" onclick="copyLink()">📋 Copiar Link</button>
+  <!-- Painel do Usuário (Bottom Left) -->
+  <div class="user-panel">
+    <div class="user-profile">
+      <div class="user-p-avatar" id="myAvatarLetter">U<div class="online-dot"></div></div>
+      <div class="user-p-info">
+        <div class="user-p-name" id="myUserNameDisplay">Você</div>
+        <div class="user-p-tag">#online</div>
+      </div>
+    </div>
+    <div class="user-tools">
+      <button class="tool-btn" id="btnMicMute" onclick="toggleMic()" title="Mutar Microfone">🎙️</button>
+      <button class="tool-btn" id="btnDeafen" onclick="toggleDeafen()" title="Ensurdecer">🎧</button>
+      <button class="tool-btn" onclick="copyRoomLink()" title="Copiar Link da Sala">🔗</button>
+    </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- 3. ÁREA PRINCIPAL / STAGE -->
+<div class="main-stage">
+  <div class="channel-header">
+    <div class="ch-title">
+      <span>📺</span> <span id="chName">transmissão-ao-vivo</span>
+      <div class="badge-live" id="badgeLive">● AO VIVO</div>
+    </div>
+    <div class="ch-actions">
+      <button class="tool-btn" onclick="toggleChatSidebar()" title="Alternar Chat">💬</button>
+    </div>
+  </div>
+
+  <div class="stage-content" id="stageContainer">
+    <!-- Overlay de Assistir Transmissão -->
+    <div class="watch-stream-overlay" id="watchOverlay">
+      <div class="stream-live-banner">📡</div>
+      <h2 id="liveOverlayTitle">A transmissão começou!</h2>
+      <p>Clique no botão abaixo para assistir ao vivo com imagem 60 FPS e áudio do jogo.</p>
+      <button class="btn-watch-discord" onclick="startWatchingStream()">
+        <span>▶</span> Assistir Transmissão
+      </button>
+    </div>
+
+    <div class="stream-placeholder" id="streamPlaceholder">
+      <div class="wumpus-icon">🖥️</div>
+      <h2 id="placeholderTitle">Ninguém está transmitindo</h2>
+      <p id="placeholderSub">Conecte-se na call ao lado ou inicie sua transmissão de tela abaixo.</p>
+    </div>
+
+    <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
+  </div>
+
+  <!-- Barra de Controle Inferior (Estilo Discord) -->
+  <div class="stream-control-bar">
+    <div class="ctrl-left">
+      <button class="d-btn d-btn-primary" id="btnGoLive" onclick="openGoLiveModal()" style="display:none;">
+        <span>📡</span> <span>Transmitir Tela</span>
+      </button>
+      <button class="d-btn d-btn-primary" id="btnWatchBar" onclick="startWatchingStream()" style="display:none;">
+        <span>▶</span> <span>Assistir</span>
+      </button>
+    </div>
+
+    <div class="ctrl-right">
+      <div class="vol-control">
+        <button class="tool-btn" id="btnVolMute" onclick="toggleStreamMute()">🔊</button>
+        <input type="range" class="vol-slider" id="streamVolSlider" min="0" max="100" value="100" oninput="setStreamVolume(this.value)">
+      </div>
+      <button class="tool-btn" onclick="toggleFullscreen()" title="Tela Cheia">⛶</button>
+    </div>
+  </div>
+</div>
+
+<!-- 4. CHAT LATERAL DIREITO -->
+<div class="chat-sidebar" id="chatSidebar">
+  <div class="chat-head">
+    <span>Chat da Sala</span>
+    <button class="tool-btn" onclick="toggleChatSidebar()">✕</button>
+  </div>
+  <div class="chat-msgs" id="chatMessages"></div>
+  <div class="chat-input-box">
+    <div class="chat-input-wrap">
+      <input type="text" id="chatInput" placeholder="Conversar em #geral..." maxlength="300">
+    </div>
+  </div>
+</div>
+
+<!-- 5. MODAL DISCORD GO LIVE -->
+<div class="discord-modal-overlay" id="goLiveModal">
+  <div class="discord-modal-card">
+    <div class="dm-header">
+      <h2>Transmitir sua tela</h2>
+    </div>
+    <div class="dm-body">
+      <div class="dm-audio-alert">
+        <strong>💡 Regra de Áudio do Discord:</strong><br>
+        Na próxima janela do navegador, escolha <strong>"Tela Inteira"</strong> e <strong>marque a caixinha "Compartilhar áudio do sistema"</strong> para transmitir o som do seu jogo/vídeo!
+      </div>
+    </div>
+    <div class="dm-footer">
+      <button class="d-btn d-btn-secondary" onclick="closeGoLiveModal()">Cancelar</button>
+      <button class="d-btn d-btn-primary" onclick="startHostStream()">Go Live</button>
+    </div>
+  </div>
+</div>
+
+<div id="voiceAudiosContainer"></div>
+<div class="toast-msg" id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -107,28 +347,43 @@ const socket = io();
 const urlParams = new URLSearchParams(window.location.search);
 const role = urlParams.get('role') || 'viewer';
 const roomId = window.location.pathname.split('/room/')[1].split('?')[0];
+const myUserName = role === 'host' ? 'Streamer (Host)' : 'Membro_' + Math.floor(Math.random() * 899 + 100);
 
-document.getElementById('roomTitle').textContent = '#' + roomId;
+document.getElementById('serverTitle').textContent = 'Sala #' + roomId;
+document.getElementById('myUserNameDisplay').textContent = myUserName;
+document.getElementById('myAvatarLetter').textContent = myUserName.substring(0, 2).toUpperCase();
+
 const video = document.getElementById('screenVideo');
-const audioEl = document.getElementById('screenAudio');
-const emptyState = document.getElementById('emptyState');
-const statusDot = document.getElementById('statusDot');
-const statusText = document.getElementById('statusText');
+const streamPlaceholder = document.getElementById('streamPlaceholder');
 const watchOverlay = document.getElementById('watchOverlay');
-const btnDockWatch = document.getElementById('btnDockWatch');
-const audioAlert = document.getElementById('audioAlert');
+const badgeLive = document.getElementById('badgeLive');
+const btnGoLive = document.getElementById('btnGoLive');
+const btnWatchBar = document.getElementById('btnWatchBar');
+const goLiveModal = document.getElementById('goLiveModal');
+const rtcConnectedBar = document.getElementById('rtcConnectedBar');
+const voiceMembersContainer = document.getElementById('voiceMembersContainer');
+const voiceAudiosContainer = document.getElementById('voiceAudiosContainer');
+const chatSidebar = document.getElementById('chatSidebar');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
 
-let localStream = null;
-let peerConnections = {};
-let viewerPC = null;
-let viewerStream = null;
-let iceQueue = [];
+let isHost = (role === 'host');
+let localScreenStream = null;
+let screenPeerConnections = {};
+let viewerScreenPC = null;
 
+let isInVoice = false;
+let localVoiceStream = null;
+let voicePeers = {};
+let isMicMuted = false;
+let isDeafened = false;
+let audioCtx = null, analyser = null, micData = null, vadInterval = null;
+
+// Servidores TURN / STUN de Alta Performance
 const rtcConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' }
@@ -136,239 +391,376 @@ const rtcConfig = {
   iceCandidatePoolSize: 10
 };
 
-function setStatus(text, isLive) {
-  statusText.textContent = text;
-  statusDot.className = 'dot ' + (isLive ? 'live' : '');
-}
-
 function showToast(m) {
   const t = document.getElementById('toast');
-  t.textContent = m;
-  t.classList.add('show');
+  t.textContent = m; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-socket.emit('join-room', { roomId, isHost: (role === 'host') });
+socket.emit('join-discord-room', { roomId, isHost, userName: myUserName });
 
-if (role === 'host') {
-  document.getElementById('btnStream').style.display = 'inline-flex';
-  document.getElementById('emptyTitle').textContent = 'Você é o Host';
-  document.getElementById('emptySub').textContent = 'Clique em Transmitir Tela para compartilhar sua gameplay.';
-  setStatus('Host Pronto', true);
-} else {
-  btnDockWatch.style.display = 'inline-flex';
+if (isHost) {
+  btnGoLive.style.display = 'inline-flex';
+  document.getElementById('placeholderTitle').textContent = 'Você é o Host da Sala';
+  document.getElementById('placeholderSub').textContent = 'Clique em "Transmitir Tela" abaixo para iniciar.';
 }
 
-function tuneSDPAudio(sdp) {
-  if (sdp.includes('opus/48000')) {
-    sdp = sdp.replace(/a=fmtp:111 .*/g, 'a=fmtp:111 minptime=10;useinbandfec=1;stereo=1;sprop-stereo=1;maxaveragebitrate=256000;cbr=1');
+// ======================== CALL DE VOZ (DISCORD STYLE) ========================
+async function joinVoiceChannel() {
+  if (isInVoice) return;
+  try {
+    localVoiceStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    });
+    isInVoice = true;
+    rtcConnectedBar.style.display = 'flex';
+    startVAD(localVoiceStream);
+    socket.emit('voice-join', { roomId, muted: isMicMuted, deafened: isDeafened });
+    showToast('🎙️ Conectado na Call Geral');
+  } catch(e) {
+    alert('Acesso ao microfone necessário para a Call.');
   }
-  return sdp;
 }
 
-// ==================== HOST ====================
-async function toggleStream() {
-  if (!localStream) {
-    try {
-      localStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: {
-          autoGainControl: false,
-          echoCancellation: false,
-          noiseSuppression: false,
-          channelCount: 2,
-          sampleRate: 48000
-        },
-        systemAudio: 'include'
-      });
+function leaveVoiceChannel() {
+  if (!isInVoice) return;
+  if (localVoiceStream) {
+    localVoiceStream.getTracks().forEach(t => t.stop());
+    localVoiceStream = null;
+  }
+  stopVAD();
+  for (let id in voicePeers) voicePeers[id].close();
+  voicePeers = {};
+  voiceAudiosContainer.innerHTML = '';
+  isInVoice = false;
+  rtcConnectedBar.style.display = 'none';
+  socket.emit('voice-leave', { roomId });
+  showToast('Desconectado da Call');
+}
 
-      const audioTracks = localStream.getAudioTracks();
-      if (audioTracks.length > 0) {
-        if ('contentHint' in audioTracks[0]) audioTracks[0].contentHint = 'music';
-        audioAlert.className = 'audio-alert green';
-        audioAlert.textContent = '🔊 ÁUDIO DO JOGO/SISTEMA CAPTURADO COM SUCESSO!';
-        audioAlert.style.display = 'block';
-        setTimeout(() => audioAlert.style.display = 'none', 5000);
-      } else {
-        audioAlert.className = 'audio-alert red';
-        audioAlert.innerHTML = '⚠️ SEM ÁUDIO: Marque "Compartilhar áudio do sistema" ao escolher a tela!';
-        audioAlert.style.display = 'block';
+function toggleMic() {
+  if (!localVoiceStream) return;
+  isMicMuted = !isMicMuted;
+  localVoiceStream.getAudioTracks().forEach(t => t.enabled = !isMicMuted);
+  const btn = document.getElementById('btnMicMute');
+  btn.className = isMicMuted ? 'tool-btn muted' : 'tool-btn';
+  btn.textContent = isMicMuted ? '🔇' : '🎙️';
+  socket.emit('voice-toggle-state', { roomId, muted: isMicMuted, deafened: isDeafened });
+}
+
+function toggleDeafen() {
+  isDeafened = !isDeafened;
+  const audios = voiceAudiosContainer.querySelectorAll('audio');
+  audios.forEach(a => a.muted = isDeafened);
+  const btn = document.getElementById('btnDeafen');
+  btn.className = isDeafened ? 'tool-btn muted' : 'tool-btn';
+  btn.textContent = isDeafened ? '🔕' : '🎧';
+}
+
+function startVAD(stream) {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    const src = audioCtx.createMediaStreamSource(stream);
+    src.connect(analyser);
+    micData = new Uint8Array(analyser.frequencyBinCount);
+
+    let wasSpeaking = false;
+    vadInterval = setInterval(() => {
+      if (isMicMuted) return;
+      analyser.getByteFrequencyData(micData);
+      let sum = 0;
+      for (let i = 0; i < micData.length; i++) sum += micData[i];
+      const isSpeaking = (sum / micData.length) > 20;
+
+      if (isSpeaking !== wasSpeaking) {
+        wasSpeaking = isSpeaking;
+        socket.emit('voice-speaking', { roomId, isSpeaking });
       }
-
-      video.srcObject = localStream;
-      video.muted = true;
-      video.style.display = 'block';
-      emptyState.style.display = 'none';
-
-      const btn = document.getElementById('btnStream');
-      btn.className = 'dbtn danger';
-      btn.innerHTML = '⏹️ Parar Transmissão';
-      setStatus('Ao Vivo (60 FPS)', true);
-
-      socket.emit('host-started-stream', { roomId });
-      localStream.getVideoTracks()[0].onended = () => toggleStream();
-    } catch (err) {
-      showToast('Transmissão cancelada');
-    }
-  } else {
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
-    audioAlert.style.display = 'none';
-    video.style.display = 'none';
-    emptyState.style.display = 'block';
-
-    const btn = document.getElementById('btnStream');
-    btn.className = 'dbtn pri';
-    btn.innerHTML = '📡 Transmitir Tela';
-    setStatus('Transmissão Parada', false);
-
-    socket.emit('host-stopped-stream', { roomId });
-    for (let id in peerConnections) peerConnections[id].close();
-    peerConnections = {};
-  }
+    }, 100);
+  } catch(e) {}
 }
 
-socket.on('connect-viewer', async ({ viewerId }) => {
-  if (!localStream) return;
-  if (peerConnections[viewerId]) peerConnections[viewerId].close();
+function stopVAD() {
+  if (vadInterval) clearInterval(vadInterval);
+  if (audioCtx) audioCtx.close().catch(()=>{});
+  audioCtx = null;
+}
 
-  const pc = new RTCPeerConnection(rtcConfig);
-  peerConnections[viewerId] = pc;
-
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
-  pc.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('webrtc-ice', { to: viewerId, candidate: e.candidate });
-  };
-
-  let offer = await pc.createOffer();
-  offer.sdp = tuneSDPAudio(offer.sdp);
-  await pc.setLocalDescription(offer);
-  socket.emit('webrtc-offer', { to: viewerId, offer });
+// WebRTC Voice Mesh
+socket.on('voice-peers-list', async ({ existingPeers }) => {
+  for (const uid of existingPeers) await createVoicePeer(uid, true);
+});
+socket.on('user-entered-voice', async ({ userId }) => {
+  await createVoicePeer(userId, false);
+});
+socket.on('user-left-voice', ({ userId }) => {
+  if (voicePeers[userId]) { voicePeers[userId].close(); delete voicePeers[userId]; }
+  const el = document.getElementById('va_' + userId); if (el) el.remove();
 });
 
-socket.on('webrtc-answer', async ({ from, answer }) => {
-  const pc = peerConnections[from];
+async function createVoicePeer(targetId, isInit) {
+  if (voicePeers[targetId]) voicePeers[targetId].close();
+  const pc = new RTCPeerConnection(rtcConfig);
+  voicePeers[targetId] = pc;
+
+  if (localVoiceStream) {
+    localVoiceStream.getTracks().forEach(t => pc.addTrack(t, localVoiceStream));
+  }
+
+  pc.ontrack = (e) => {
+    let a = document.getElementById('va_' + targetId);
+    if (!a) {
+      a = document.createElement('audio');
+      a.id = 'va_' + targetId;
+      a.autoplay = true;
+      voiceAudiosContainer.appendChild(a);
+    }
+    a.srcObject = e.streams[0];
+    a.muted = isDeafened;
+    a.play().catch(()=>{});
+  };
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate) socket.emit('v-ice', { to: targetId, candidate: e.candidate });
+  };
+
+  if (isInit) {
+    const o = await pc.createOffer();
+    await pc.setLocalDescription(o);
+    socket.emit('v-offer', { to: targetId, offer: o });
+  }
+}
+socket.on('v-offer', async ({ from, offer }) => {
+  let pc = voicePeers[from];
+  if (!pc) { await createVoicePeer(from, false); pc = voicePeers[from]; }
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  const a = await pc.createAnswer();
+  await pc.setLocalDescription(a);
+  socket.emit('v-answer', { to: from, answer: a });
+});
+socket.on('v-answer', async ({ from, answer }) => {
+  if (voicePeers[from]) await voicePeers[from].setRemoteDescription(new RTCSessionDescription(answer));
+});
+socket.on('v-ice', async ({ from, candidate }) => {
+  if (voicePeers[from]) try { await voicePeers[from].addIceCandidate(new RTCIceCandidate(candidate)); } catch(e){}
+});
+
+// ======================== TRANSMISSÃO DE TELA ========================
+function openGoLiveModal() {
+  if (localScreenStream) stopHostStream();
+  else goLiveModal.classList.add('active');
+}
+function closeGoLiveModal() { goLiveModal.classList.remove('active'); }
+
+async function startHostStream() {
+  closeGoLiveModal();
+  try {
+    localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 }
+    });
+
+    const hasAudio = localScreenStream.getAudioTracks().length > 0;
+
+    video.srcObject = localScreenStream;
+    video.muted = true;
+    video.style.display = 'block';
+    streamPlaceholder.style.display = 'none';
+
+    btnGoLive.className = 'd-btn d-btn-danger';
+    btnGoLive.innerHTML = '<span>⏹</span> <span>Parar Tela</span>';
+    badgeLive.style.display = 'inline-flex';
+
+    socket.emit('host-go-live', { roomId, hasAudio });
+    localScreenStream.getVideoTracks()[0].onended = () => stopHostStream();
+  } catch(e) {
+    showToast('Transmissão cancelada');
+  }
+}
+
+function stopHostStream() {
+  if (localScreenStream) {
+    localScreenStream.getTracks().forEach(t => t.stop());
+    localScreenStream = null;
+  }
+  video.style.display = 'none';
+  streamPlaceholder.style.display = 'flex';
+  badgeLive.style.display = 'none';
+
+  btnGoLive.className = 'd-btn d-btn-primary';
+  btnGoLive.innerHTML = '<span>📡</span> <span>Transmitir Tela</span>';
+
+  socket.emit('host-end-live', { roomId });
+  for (let id in screenPeerConnections) screenPeerConnections[id].close();
+  screenPeerConnections = {};
+}
+
+// Host envia tela para espectador
+socket.on('viewer-ready-for-stream', async ({ viewerId }) => {
+  if (!localScreenStream) return;
+  if (screenPeerConnections[viewerId]) screenPeerConnections[viewerId].close();
+
+  const pc = new RTCPeerConnection(rtcConfig);
+  screenPeerConnections[viewerId] = pc;
+
+  localScreenStream.getTracks().forEach(track => pc.addTrack(track, localScreenStream));
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate) socket.emit('s-ice', { to: viewerId, candidate: e.candidate });
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit('s-offer', { to: viewerId, offer });
+});
+
+socket.on('s-answer', async ({ from, answer }) => {
+  const pc = screenPeerConnections[from];
   if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
 });
 
-// ==================== VIEWER ====================
-function startWatching() {
-  watchOverlay.style.display = 'none';
+// ======================== ESPECTADOR ========================
+function startWatchingStream() {
+  watchOverlay.classList.remove('active');
+  btnWatchBar.style.display = 'none';
   showToast('Conectando à transmissão...');
-  socket.emit('viewer-request-stream', { roomId });
+  socket.emit('request-stream', { roomId });
 }
 
-socket.on('webrtc-offer', async ({ from, offer }) => {
-  if (viewerPC) viewerPC.close();
+socket.on('s-offer', async ({ from, offer }) => {
+  if (viewerScreenPC) viewerScreenPC.close();
 
-  viewerPC = new RTCPeerConnection(rtcConfig);
-  viewerStream = new MediaStream();
-  iceQueue = [];
+  viewerScreenPC = new RTCPeerConnection(rtcConfig);
+  const mediaStream = new MediaStream();
 
-  video.srcObject = viewerStream;
-  audioEl.srcObject = viewerStream;
-
-  viewerPC.ontrack = (event) => {
-    viewerStream.addTrack(event.track);
+  viewerScreenPC.ontrack = (event) => {
+    mediaStream.addTrack(event.track);
+    video.srcObject = mediaStream;
 
     video.style.display = 'block';
-    emptyState.style.display = 'none';
-    watchOverlay.style.display = 'none';
-    setStatus('Ao Vivo', true);
+    streamPlaceholder.style.display = 'none';
+    watchOverlay.classList.remove('active');
+    badgeLive.style.display = 'inline-flex';
 
     video.muted = false;
     video.volume = 1;
-    audioEl.muted = false;
-    audioEl.volume = 1;
-
     video.play().catch(()=>{});
-    audioEl.play().catch(()=>{});
   };
 
-  viewerPC.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('webrtc-ice', { to: from, candidate: e.candidate });
+  viewerScreenPC.onicecandidate = (e) => {
+    if (e.candidate) socket.emit('s-ice', { to: from, candidate: e.candidate });
   };
 
-  await viewerPC.setRemoteDescription(new RTCSessionDescription(offer));
-
-  for (const cand of iceQueue) {
-    await viewerPC.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{});
-  }
-  iceQueue = [];
-
-  let answer = await viewerPC.createAnswer();
-  answer.sdp = tuneSDPAudio(answer.sdp);
-  await viewerPC.setLocalDescription(answer);
-  socket.emit('webrtc-answer', { to: from, answer });
+  await viewerScreenPC.setRemoteDescription(new RTCSessionDescription(offer));
+  const answer = await viewerScreenPC.createAnswer();
+  await viewerScreenPC.setLocalDescription(answer);
+  socket.emit('s-answer', { to: from, answer });
 });
 
-socket.on('webrtc-ice', async ({ from, candidate }) => {
-  if (role === 'host') {
-    const pc = peerConnections[from];
-    if (pc && pc.remoteDescription) {
-      try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
-    }
-  } else {
-    if (viewerPC && viewerPC.remoteDescription) {
-      try { await viewerPC.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
-    } else {
-      iceQueue.push(candidate);
-    }
+socket.on('s-ice', async ({ from, candidate }) => {
+  const pc = isHost ? screenPeerConnections[from] : viewerScreenPC;
+  if (pc && pc.remoteDescription) {
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e){}
   }
 });
 
-socket.on('stream-is-live', () => {
-  if (role !== 'host' && (!video.srcObject || video.style.display === 'none')) {
-    watchOverlay.style.display = 'flex';
+socket.on('stream-started', () => {
+  if (!isHost) {
+    watchOverlay.classList.add('active');
+    btnWatchBar.style.display = 'inline-flex';
+    badgeLive.style.display = 'inline-flex';
   }
 });
 
 socket.on('stream-ended', () => {
   video.style.display = 'none';
-  emptyState.style.display = 'block';
-  watchOverlay.style.display = 'none';
-  setStatus('Transmissão Pausada', false);
+  streamPlaceholder.style.display = 'flex';
+  watchOverlay.classList.remove('active');
+  badgeLive.style.display = 'none';
+  btnWatchBar.style.display = 'none';
 });
 
 socket.on('host-left', () => {
   video.style.display = 'none';
-  emptyState.style.display = 'block';
-  watchOverlay.style.display = 'none';
-  setStatus('Host Saiu', false);
+  streamPlaceholder.style.display = 'flex';
+  badgeLive.style.display = 'none';
 });
 
-socket.on('room-status', (d) => {
-  document.getElementById('viewerCount').textContent = d.viewers;
-  if (role !== 'host' && d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
-    watchOverlay.style.display = 'flex';
+// ======================== ESTADO GERAL DO DISCORD ========================
+socket.on('discord-state', (state) => {
+  // Atualiza lista de voz
+  const container = document.getElementById('voiceMembersContainer');
+  container.innerHTML = state.voiceUsers.map(u => `
+    <div class="voice-member-item ${u.isSpeaking ? 'speaking' : ''}" id="vm_${u.id}">
+      <div class="voice-avatar">${u.name.substring(0, 2).toUpperCase()}</div>
+      <div class="name">${u.name}</div>
+      <div style="font-size:0.75rem;">${u.muted ? '🔇' : ''}</div>
+    </div>
+  `).join('');
+
+  if (!isHost && state.isStreaming && (!video.srcObject || video.style.display === 'none')) {
+    watchOverlay.classList.add('active');
+    btnWatchBar.style.display = 'inline-flex';
+    badgeLive.style.display = 'inline-flex';
   }
 });
 
-function setVolume(v) {
-  const vol = v / 100;
-  video.volume = vol;
-  audioEl.volume = vol;
-  video.muted = (v == 0);
-  audioEl.muted = (v == 0);
-  document.getElementById('btnMute').textContent = (v == 0) ? '🔇 Mudo' : '🔊 Som';
-}
+socket.on('user-speaking-change', ({ userId, isSpeaking }) => {
+  const el = document.getElementById('vm_' + userId);
+  if (el) {
+    if (isSpeaking) el.classList.add('speaking');
+    else el.classList.remove('speaking');
+  }
+});
 
-function toggleMute() {
+// Chat
+function toggleChatSidebar() { chatSidebar.classList.toggle('open'); }
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const text = chatInput.value.trim();
+    if (!text) return;
+    socket.emit('send-chat', { roomId, text });
+    chatInput.value = '';
+  }
+});
+socket.on('chat-message', (msg) => {
+  const div = document.createElement('div');
+  div.className = 'chat-msg';
+  div.innerHTML = `
+    <div class="c-avatar" style="background:${msg.avatarColor}">${msg.user.substring(0,2).toUpperCase()}</div>
+    <div class="c-body">
+      <div class="header">
+        <span class="name">${msg.user}</span>
+        <span class="time">${msg.time}</span>
+      </div>
+      <div class="text">${msg.text}</div>
+    </div>
+  `;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+socket.on('chat-history', (msgs) => msgs.forEach(m => socket.emit('chat-message', m)));
+
+// Controles de Volume & Fullscreen
+function setStreamVolume(val) {
+  video.volume = val / 100;
+  video.muted = (val == 0);
+  document.getElementById('btnVolMute').textContent = (val == 0) ? '🔇' : '🔊';
+}
+function toggleStreamMute() {
   video.muted = !video.muted;
-  audioEl.muted = video.muted;
-  document.getElementById('btnMute').textContent = video.muted ? '🔇 Mudo' : '🔊 Som';
+  document.getElementById('btnVolMute').textContent = video.muted ? '🔇' : '🔊';
 }
-
 function toggleFullscreen() {
-  const stage = document.getElementById('stageArea');
-  if (!document.fullscreenElement) stage.requestFullscreen().catch(()=>{});
+  const container = document.getElementById('stageContainer');
+  if (!document.fullscreenElement) container.requestFullscreen().catch(()=>{});
   else document.exitFullscreen().catch(()=>{});
 }
-
-function copyLink() {
+function copyRoomLink() {
   const url = window.location.origin + '/room/' + roomId + '?role=viewer';
-  navigator.clipboard.writeText(url).then(() => showToast('📋 Link copiado com sucesso!'));
+  navigator.clipboard.writeText(url).then(() => showToast('🔗 Link da sala copiado!'));
 }
 </script>
 </body>
