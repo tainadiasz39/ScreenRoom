@@ -8,35 +8,35 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
 body { background:#080a11; color:#f1f5f9; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
-.topbar { height:56px; background:rgba(13,17,28,0.95); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
-.stage { flex:1; display:flex; align-items:center; justify-content:center; background:#06080e; padding:12px; position:relative; overflow:hidden; }
-video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:contain; border-radius:14px; background:#000; }
-.stage:fullscreen video { max-height:100vh; width:100vw; border-radius:0; }
 
-.status-badge { display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.06); padding:4px 12px; border-radius:20px; font-weight:700; }
+.topbar { height:56px; background:rgba(13,17,28,0.95); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+.status-pill { display:flex; align-items:center; gap:8px; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:6px 14px; border-radius:20px; font-weight:700; }
 .dot { width:8px; height:8px; border-radius:50%; background:#eab308; }
 .dot.live { background:#22c55e; box-shadow:0 0 10px #22c55e; }
+
+.stage { flex:1; display:flex; align-items:center; justify-content:center; background:#06080e; padding:12px; position:relative; overflow:hidden; }
+video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:contain; border-radius:14px; background:#000; box-shadow:0 20px 50px rgba(0,0,0,0.8); }
+.stage:fullscreen video { max-height:100vh; width:100vw; border-radius:0; }
+
+.unmute-banner {
+  position:absolute; top:20px; left:50%; transform:translateX(-50%);
+  background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border:none;
+  padding:12px 24px; border-radius:30px; font-weight:700; font-size:0.9rem;
+  cursor:pointer; box-shadow:0 10px 25px rgba(99,102,241,0.5); z-index:50; display:none;
+}
 
 .dock-bar { height:68px; background:#0d111c; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 18px; flex-shrink:0; }
 .dbtn { background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.1); padding:9px 16px; border-radius:12px; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s; }
 .dbtn:hover { background:rgba(255,255,255,0.15); transform:translateY(-1px); }
 .dbtn.pri { background:linear-gradient(135deg,#6366f1,#4f46e5); border:none; }
 .dbtn.danger { background:#ef4444; border:none; }
+
 .vslider { -webkit-appearance:none; width:90px; height:5px; border-radius:5px; background:rgba(255,255,255,0.2); outline:none; cursor:pointer; }
 .vslider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#6366f1; cursor:pointer; }
+
 .toast { position:fixed; bottom:85px; left:50%; transform:translateX(-50%); background:#1f2937; border:1px solid #6366f1; color:#fff; padding:10px 20px; border-radius:25px; font-size:0.85rem; opacity:0; transition:0.3s; pointer-events:none; z-index:100; }
 .toast.show { opacity:1; }
-
-.unmute-alert {
-  position:absolute; top:20px;
-  background:#6366f1; color:#fff; border:none; padding:12px 24px;
-  border-radius:30px; font-weight:700; font-size:0.9rem; cursor:pointer;
-  box-shadow:0 10px 25px rgba(99,102,241,0.5); z-index:50; display:none;
-}
 </style>
-<!-- Carrega PeerJS Oficial -->
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
@@ -44,16 +44,16 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
   <div style="display:flex; align-items:center; gap:10px;">
     <button class="dbtn" onclick="location.href='/'">←</button>
     <span id="roomTitle" style="font-weight:700;">Sala</span>
-    <div class="status-badge">
+    <div class="status-pill">
       <div class="dot" id="statusDot"></div>
-      <span id="statusText">Conectando...</span>
+      <span id="statusText">Aguardando</span>
     </div>
   </div>
   <span style="font-size:0.85rem; color:#94a3b8;">👥 <span id="viewerCount">0</span> online</span>
 </div>
 
 <div class="stage" id="stageArea">
-  <button class="unmute-alert" id="unmuteBtn" onclick="enableAudio()">🔊 Clique para Ativar o Áudio</button>
+  <button class="unmute-banner" id="unmuteBtn" onclick="enableAudio()">🔊 Clique para Ativar o Áudio da Transmissão</button>
   
   <div id="emptyState" style="text-align:center; color:#94a3b8;">
     <div style="font-size:3.5rem;">🖥️</div>
@@ -77,6 +77,7 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 
 <div class="toast" id="toast"></div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
 const urlParams = new URLSearchParams(window.location.search);
@@ -91,36 +92,36 @@ const statusText = document.getElementById('statusText');
 const unmuteBtn = document.getElementById('unmuteBtn');
 
 let localStream = null;
-let activeCalls = {};
+let peerConnections = {};
+let iceCandidatesQueue = {};
 
-// Configuração PeerJS conectada direto no seu servidor do Render
-const peer = new Peer(undefined, {
-  host: location.hostname,
-  port: location.port || (location.protocol === 'https:' ? 443 : 80),
-  path: '/peerjs',
-  secure: location.protocol === 'https:',
-  config: {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
-      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' },
-      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelay', credential: 'openrelay' }
-    ]
-  }
-});
-
-peer.on('open', (peerId) => {
-  socket.emit('join-room', { roomId, peerId, isHost: (role === 'host') });
-  if (role === 'host') {
-    document.getElementById('btnStream').style.display = 'inline-flex';
-    document.getElementById('emptyTitle').textContent = 'Você é o Host';
-    document.getElementById('emptySub').textContent = 'Clique em "Transmitir Tela" para compartilhar.';
-    setStatus('Host Pronto', true);
-  } else {
-    setStatus('Aguardando Transmissão', false);
-  }
-});
+// SERVIDORES STUN + TURN GLOBAIS DE ALTA DISPONIBILIDADE
+const rtcConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelay',
+      credential: 'openrelay'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelay',
+      credential: 'openrelay'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelay',
+      credential: 'openrelay'
+    }
+  ],
+  iceCandidatePoolSize: 10
+};
 
 function setStatus(text, isLive) {
   statusText.textContent = text;
@@ -134,7 +135,16 @@ function showToast(m) {
   setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ======================== HOST: TRANSMISSÃO ========================
+socket.emit('join-room', { roomId, isHost: (role === 'host') });
+
+if (role === 'host') {
+  document.getElementById('btnStream').style.display = 'inline-flex';
+  document.getElementById('emptyTitle').textContent = 'Você é o Host';
+  document.getElementById('emptySub').textContent = 'Clique em "Transmitir Tela" para compartilhar com áudio.';
+  setStatus('Host Pronto', true);
+}
+
+// ======================== TRANSMISSÃO (HOST) ========================
 async function toggleStream() {
   if (!localStream) {
     try {
@@ -152,11 +162,11 @@ async function toggleStream() {
       document.getElementById('btnStream').innerHTML = '⏹️ Parar Transmissão';
       setStatus('Ao Vivo (60 FPS)', true);
 
-      socket.emit('host-streaming-started', { roomId, hostPeerId: peer.id });
+      socket.emit('stream-state', { roomId, isStreaming: true });
 
       localStream.getVideoTracks()[0].onended = () => toggleStream();
     } catch (err) {
-      alert('Erro ao capturar tela: ' + err.message);
+      alert('Aviso: É necessário selecionar uma tela/janela para transmitir.');
     }
   } else {
     localStream.getTracks().forEach(t => t.stop());
@@ -168,60 +178,107 @@ async function toggleStream() {
     document.getElementById('btnStream').innerHTML = '📡 Transmitir Tela';
     setStatus('Transmissão Parada', false);
 
-    for (let id in activeCalls) {
-      activeCalls[id].close();
-    }
-    activeCalls = {};
+    socket.emit('stream-state', { roomId, isStreaming: false });
 
-    socket.emit('host-streaming-stopped', { roomId });
+    for (let id in peerConnections) peerConnections[id].close();
+    peerConnections = {};
   }
 }
 
-// Host liga para os espectadores conectados
-socket.on('call-viewer', ({ viewerPeerId }) => {
-  if (!localStream || !viewerPeerId) return;
-  if (activeCalls[viewerPeerId]) activeCalls[viewerPeerId].close();
+// Host cria a conexão para cada espectador
+socket.on('new-viewer', async (viewerId) => {
+  if (!localStream) return;
+  if (peerConnections[viewerId]) peerConnections[viewerId].close();
 
-  const call = peer.call(viewerPeerId, localStream);
-  activeCalls[viewerPeerId] = call;
+  const pc = new RTCPeerConnection(rtcConfig);
+  peerConnections[viewerId] = pc;
+
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate) socket.emit('signal-ice', { to: viewerId, candidate: e.candidate });
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit('signal-offer', { to: viewerId, offer });
 });
 
-// ======================== ESPECTADOR: RECEBER VÍDEO ========================
-peer.on('call', (call) => {
-  call.answer(); // Responde automaticamente sem precisar enviar stream de volta
+socket.on('signal-answer', async ({ from, answer }) => {
+  const pc = peerConnections[from];
+  if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
+});
 
-  call.on('stream', (remoteStream) => {
-    video.srcObject = remoteStream;
+socket.on('signal-ice', async ({ from, candidate }) => {
+  const pc = (role === 'host') ? peerConnections[from] : window.viewerPC;
+  if (pc && pc.remoteDescription) {
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
+  } else {
+    if (!iceCandidatesQueue[from]) iceCandidatesQueue[from] = [];
+    iceCandidatesQueue[from].push(candidate);
+  }
+});
+
+// ======================== RECEBIMENTO (ESPECTADOR) ========================
+socket.on('signal-offer', async ({ from, offer }) => {
+  if (window.viewerPC) window.viewerPC.close();
+
+  const pc = new RTCPeerConnection(rtcConfig);
+  window.viewerPC = pc;
+
+  pc.ontrack = (event) => {
+    if (event.streams && event.streams[0]) {
+      video.srcObject = event.streams[0];
+    } else {
+      if (!video.srcObject) video.srcObject = new MediaStream();
+      video.srcObject.addTrack(event.track);
+    }
+
     video.style.display = 'block';
     emptyState.style.display = 'none';
-    setStatus('Assistindo Ao Vivo', true);
+    setStatus('Ao Vivo', true);
 
     video.play().catch(() => {
       video.muted = true;
       video.play();
       unmuteBtn.style.display = 'block';
     });
-  });
+  };
 
-  call.on('close', () => {
-    video.style.display = 'none';
-    emptyState.style.display = 'block';
-    setStatus('Transmissão Finalizada', false);
-  });
+  pc.onicecandidate = (e) => {
+    if (e.candidate) socket.emit('signal-ice', { to: from, candidate: e.candidate });
+  };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+  if (iceCandidatesQueue[from]) {
+    for (const cand of iceCandidatesQueue[from]) {
+      await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+    }
+    delete iceCandidatesQueue[from];
+  }
+
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  socket.emit('signal-answer', { to: from, answer });
 });
 
-socket.on('host-disconnected', () => {
+socket.on('stream-ready', () => {
+  if (role !== 'host') {
+    socket.emit('request-stream', { roomId });
+  }
+});
+
+socket.on('host-left', () => {
   video.style.display = 'none';
   emptyState.style.display = 'block';
   setStatus('Host Saiu', false);
 });
 
-socket.on('room-update', (d) => {
+socket.on('room-status', (d) => {
   document.getElementById('viewerCount').textContent = d.viewers;
-  if (role !== 'host' && !d.isStreaming) {
-    video.style.display = 'none';
-    emptyState.style.display = 'block';
-    setStatus('Aguardando Transmissão', false);
+  if (role !== 'host' && d.isStreaming && (!video.srcObject || video.style.display === 'none')) {
+    socket.emit('request-stream', { roomId });
   }
 });
 
@@ -248,15 +305,15 @@ function toggleMute() {
 function toggleFullscreen() {
   const stage = document.getElementById('stageArea');
   if (!document.fullscreenElement) {
-    stage.requestFullscreen().catch(()=>{});
+    stage.requestFullscreen().catch(() => {});
   } else {
-    document.exitFullscreen().catch(()=>{});
+    document.exitFullscreen().catch(() => {});
   }
 }
 
 function copyLink() {
   const url = window.location.origin + '/room/' + roomId + '?role=viewer';
-  navigator.clipboard.writeText(url).then(() => showToast('📋 Link copiado!'));
+  navigator.clipboard.writeText(url).then(() => showToast('📋 Link copiado com sucesso!'));
 }
 </script>
 </body>

@@ -1,20 +1,12 @@
 ﻿const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const { ExpressPeerServer } = require('peer');
 const crypto = require('crypto');
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
-
-// Servidor PeerJS embutido no mesmo link do Render
-const peerServer = ExpressPeerServer(server, {
-  debug: false,
-  path: '/'
-});
-app.use('/peerjs', peerServer);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -28,71 +20,65 @@ app.post('/api/create-room', (req, res) => {
   const roomId = crypto.randomBytes(4).toString('hex');
   rooms.set(roomId, {
     id: roomId,
-    hostSocketId: null,
-    hostPeerId: null,
-    isStreaming: false,
-    viewers: new Map()
+    hostId: null,
+    viewers: new Set(),
+    isStreaming: false
   });
   res.json({ roomId });
 });
 
 io.on('connection', (socket) => {
-  socket.on('join-room', ({ roomId, peerId, isHost }) => {
-    let room = rooms.get(roomId) || { id: roomId, hostSocketId: null, hostPeerId: null, isStreaming: false, viewers: new Map() };
+  socket.on('join-room', ({ roomId, isHost }) => {
+    let room = rooms.get(roomId) || { id: roomId, hostId: null, viewers: new Set(), isStreaming: false };
     rooms.set(roomId, room);
 
     socket.join(roomId);
     socket.roomId = roomId;
-    socket.peerId = peerId;
     socket.isHost = isHost;
 
     if (isHost) {
-      room.hostSocketId = socket.id;
-      room.hostPeerId = peerId;
+      room.hostId = socket.id;
     } else {
-      room.viewers.set(socket.id, peerId);
+      room.viewers.add(socket.id);
     }
 
-    io.to(roomId).emit('room-update', {
-      viewers: room.viewers.size + (room.hostSocketId ? 1 : 0),
+    io.to(roomId).emit('room-status', {
+      viewers: room.viewers.size + (room.hostId ? 1 : 0),
       isStreaming: room.isStreaming,
-      hostPeerId: room.hostPeerId
+      hasHost: room.hostId !== null
     });
 
-    // Se o host já estiver transmitindo, conecta com o novo espectador
-    if (room.isStreaming && room.hostSocketId && !isHost) {
-      io.to(room.hostSocketId).emit('call-viewer', { viewerPeerId: peerId });
+    if (room.isStreaming && room.hostId && !isHost) {
+      io.to(room.hostId).emit('new-viewer', socket.id);
     }
   });
 
-  socket.on('host-streaming-started', ({ roomId, hostPeerId }) => {
+  socket.on('stream-state', ({ roomId, isStreaming }) => {
     const room = rooms.get(roomId);
     if (room) {
-      room.isStreaming = true;
-      room.hostPeerId = hostPeerId;
-      io.to(roomId).emit('room-update', {
-        viewers: room.viewers.size + (room.hostSocketId ? 1 : 0),
-        isStreaming: true,
-        hostPeerId: room.hostPeerId
+      room.isStreaming = isStreaming;
+      io.to(roomId).emit('room-status', {
+        viewers: room.viewers.size + (room.hostId ? 1 : 0),
+        isStreaming,
+        hasHost: room.hostId !== null
       });
-      // Manda o host ligar para cada espectador conectado
-      for (const [sId, vPeerId] of room.viewers.entries()) {
-        socket.emit('call-viewer', { viewerPeerId: vPeerId });
+      if (isStreaming) {
+        socket.to(roomId).emit('stream-ready');
       }
     }
   });
 
-  socket.on('host-streaming-stopped', ({ roomId }) => {
+  socket.on('request-stream', ({ roomId }) => {
     const room = rooms.get(roomId);
-    if (room) {
-      room.isStreaming = false;
-      io.to(roomId).emit('room-update', {
-        viewers: room.viewers.size + (room.hostSocketId ? 1 : 0),
-        isStreaming: false,
-        hostPeerId: room.hostPeerId
-      });
+    if (room && room.hostId && room.isStreaming) {
+      io.to(room.hostId).emit('new-viewer', socket.id);
     }
   });
+
+  // Troca de Sinais WebRTC Direta
+  socket.on('signal-offer', ({ to, offer }) => io.to(to).emit('signal-offer', { from: socket.id, offer }));
+  socket.on('signal-answer', ({ to, answer }) => io.to(to).emit('signal-answer', { from: socket.id, answer }));
+  socket.on('signal-ice', ({ to, candidate }) => io.to(to).emit('signal-ice', { from: socket.id, candidate }));
 
   socket.on('disconnect', () => {
     const roomId = socket.roomId;
@@ -101,21 +87,20 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     if (socket.isHost) {
-      room.hostSocketId = null;
-      room.hostPeerId = null;
+      room.hostId = null;
       room.isStreaming = false;
-      io.to(roomId).emit('host-disconnected');
+      io.to(roomId).emit('host-left');
     } else {
       room.viewers.delete(socket.id);
     }
 
-    io.to(roomId).emit('room-update', {
-      viewers: room.viewers.size + (room.hostSocketId ? 1 : 0),
+    io.to(roomId).emit('room-status', {
+      viewers: room.viewers.size + (room.hostId ? 1 : 0),
       isStreaming: room.isStreaming,
-      hostPeerId: room.hostPeerId
+      hasHost: room.hostId !== null
     });
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('🔥 Servidor ScreenRoom rodando na porta ' + PORT));
+server.listen(PORT, () => console.log('ScreenRoom Servidor rodando na porta ' + PORT));

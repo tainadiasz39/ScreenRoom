@@ -3,16 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ScreenRoom</title>
+<title>ScreenRoom • Início</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
 body { background:#080a11; color:#f1f5f9; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-.card { background:rgba(17,24,39,0.8); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:35px 25px; text-align:center; width:100%; max-width:400px; }
-h1 { font-size:1.8rem; font-weight:800; margin-bottom:8px; }
+.card { background:rgba(17,24,39,0.85); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:35px 25px; text-align:center; width:100%; max-width:400px; box-shadow:0 20px 50px rgba(0,0,0,0.5); }
+h1 { font-size:1.8rem; font-weight:800; margin-bottom:8px; background:linear-gradient(135deg,#fff,#94a3b8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 p { color:#94a3b8; font-size:0.9rem; margin-bottom:25px; }
-.btn { width:100%; padding:15px; border-radius:14px; border:none; font-size:1rem; font-weight:700; cursor:pointer; margin-bottom:10px; }
-.btn-p { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; }
+.btn { width:100%; padding:15px; border-radius:14px; border:none; font-size:1rem; font-weight:700; cursor:pointer; margin-bottom:10px; transition:0.2s; }
+.btn:hover { transform:translateY(-2px); }
+.btn-p { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; box-shadow:0 10px 25px rgba(99,102,241,0.4); }
 .btn-s { background:rgba(255,255,255,0.08); color:#e2e8f0; }
 .input-box { display:none; margin-top:15px; flex-direction:column; gap:8px; }
 .input-box.active { display:flex; }
@@ -21,13 +22,13 @@ input { padding:14px; border-radius:12px; border:1px solid rgba(255,255,255,0.15
 </head>
 <body>
 <div class="card">
-  <div style="font-size:3rem; margin-bottom:10px;">✨</div>
+  <div style="font-size:3rem; margin-bottom:10px;">🖥️</div>
   <h1>Screen Room</h1>
-  <p>Transmissao 60 FPS + Call de voz estilo Discord</p>
+  <p>Transmissão de tela 60 FPS com áudio cristalino estilo Discord</p>
   <button class="btn btn-p" onclick="createRoom()">🚀 Criar Nova Sala</button>
-  <button class="btn btn-s" onclick="toggleJoin()">🔗 Entrar na Sala</button>
+  <button class="btn btn-s" onclick="toggleJoin()">🔗 Entrar em uma Sala</button>
   <div class="input-box" id="joinBox">
-    <input type="text" id="roomInput" placeholder="Cole o Link ou Codigo...">
+    <input type="text" id="roomInput" placeholder="Cole o Link ou Código...">
     <button class="btn btn-p" onclick="joinRoom()">Entrar</button>
   </div>
 </div>
@@ -40,7 +41,7 @@ function createRoom(){
 function toggleJoin(){ document.getElementById('joinBox').classList.toggle('active'); }
 function joinRoom(){
   let v=document.getElementById('roomInput').value.trim();
-  if(!v) return alert('Digite o link ou codigo');
+  if(!v) return alert('Digite o link ou código');
   if(v.includes('/room/')) v=v.split('/room/')[1].split('?')[0];
   window.location.href='/room/'+v+'?role=viewer';
 }
