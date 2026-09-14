@@ -91,13 +91,19 @@ io.on("connection", socket => {
   socket.on("rejoin-host", ({ roomId, hostKey } = {}) => {
     const room = rooms.get(roomId);
 
-    if (
-      !room ||
-      room.hostKey !== hostKey ||
-      (room.hostId && room.hostId !== socket.id)
-    ) {
+    if (!room || room.hostKey !== hostKey) {
       socket.emit("host-unavailable");
       return;
+    }
+
+    if (room.hostId && room.hostId !== socket.id) {
+      const oldHost = io.sockets.sockets.get(room.hostId);
+
+      socketRooms.delete(room.hostId);
+
+      if (oldHost) {
+        oldHost.leave(roomId);
+      }
     }
 
     room.hostId = socket.id;
@@ -307,3 +313,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, "0.0.0.0", () => {
   console.log("ScreenRoom rodando na porta " + PORT);
 });
+
