@@ -38,6 +38,51 @@ select{background:#1e1f22;color:#fff;border:0;border-radius:5px;padding:11px;mar
     grid-template-columns:1fr !important;
   }
 }
+</style><style>
+main{
+  display:grid !important;
+  grid-template-columns:minmax(0, 1fr) 380px !important;
+  gap:18px !important;
+  align-items:start !important;
+}
+
+.stage{
+  grid-column:1 !important;
+  grid-row:1 !important;
+}
+
+.sidePanels{
+  grid-column:2 !important;
+  grid-row:1 !important;
+  display:block !important;
+  width:100% !important;
+}
+
+.sidePanels .panel{
+  width:100% !important;
+  margin-top:0 !important;
+  margin-bottom:18px !important;
+}
+
+.chat{
+  height:130px !important;
+}
+
+@media(max-width:1000px){
+  main{
+    grid-template-columns:1fr !important;
+  }
+
+  .stage{
+    grid-column:1 !important;
+    grid-row:1 !important;
+  }
+
+  .sidePanels{
+    grid-column:1 !important;
+    grid-row:2 !important;
+  }
+}
 </style></head>
 <body>
 <header>
@@ -541,6 +586,7 @@ async function toggleFullscreen() {
 </script>
 </body>
 </html>
+
 
 
 
