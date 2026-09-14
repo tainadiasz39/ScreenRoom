@@ -75,7 +75,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Troca de Sinais WebRTC Direta
   socket.on('signal-offer', ({ to, offer }) => io.to(to).emit('signal-offer', { from: socket.id, offer }));
   socket.on('signal-answer', ({ to, answer }) => io.to(to).emit('signal-answer', { from: socket.id, answer }));
   socket.on('signal-ice', ({ to, candidate }) => io.to(to).emit('signal-ice', { from: socket.id, candidate }));
@@ -103,4 +102,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('ScreenRoom Servidor rodando na porta ' + PORT));
+server.listen(PORT, () => console.log('ScreenRoom rodando na porta ' + PORT));
