@@ -6,7 +6,6 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
   transports: ["websocket", "polling"]
@@ -16,294 +15,328 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const rooms = new Map();
-const socketRooms = new Map();
 
-function listRooms() {
-  return [...rooms.values()]
+function createRoomObject(roomId) {
+  return {
+    id: roomId,
+    hostId: null,
+    hostName: "Host",
+    viewers: new Set(),
+    pending: new Map(),
+    streaming: false,
+    createdAt: Date.now()
+  };
+}
+
+function publicRooms() {
+  return Array.from(rooms.values())
     .filter(room => room.hostId)
-    .sort((a, b) => Number(b.streaming) - Number(a.streaming))
     .map(room => ({
       id: room.id,
-      name: room.name,
-      hostName: room.hostName,
+      hostName: room.hostName || "Host",
       viewers: room.viewers.size,
-      isStreaming: room.streaming
+      streaming: room.streaming
     }));
 }
 
-function updateRooms() {
-  io.emit("rooms-updated", listRooms());
+function broadcastRooms() {
+  io.emit("public-rooms", publicRooms());
 }
 
-function roomStatus(roomId) {
+function sendRoomStatus(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
 
   io.to(roomId).emit("room-status", {
-    roomName: room.name,
-    viewers: room.viewers.size,
-    isStreaming: room.streaming
+    viewers: room.viewers.size + (room.hostId ? 1 : 0),
+    isStreaming: room.streaming,
+    hasHost: Boolean(room.hostId)
   });
 }
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, rooms: rooms.size });
+  res.json({
+    ok: true,
+    service: "ScreenRoom",
+    rooms: rooms.size,
+    time: new Date().toISOString()
+  });
+});
+
+app.get("/api/rooms", (req, res) => {
+  res.json({ ok: true, rooms: publicRooms() });
 });
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.get("/room", (req, res) => {
+app.get("/room/:id", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "room.html"));
 });
 
+app.post("/api/create-room", (req, res) => {
+  let roomId;
+  do {
+    roomId = crypto.randomBytes(4).toString("hex").toUpperCase();
+  } while (rooms.has(roomId));
+
+  rooms.set(roomId, createRoomObject(roomId));
+
+  res.json({ ok: true, roomId });
+});
+
 io.on("connection", socket => {
-  socket.emit("rooms-updated", listRooms());
+  console.log("Conectado:", socket.id);
 
-  socket.on("create-room", ({ name, hostName } = {}) => {
-    const roomId = crypto.randomBytes(8).toString("hex");
+  socket.on("join-room", ({ roomId, isHost, name } = {}) => {
+    if (typeof roomId !== "string") return;
 
-    const room = {
-      id: roomId,
-      name: String(name || "Sala ao vivo").trim().slice(0, 60) || "Sala ao vivo",
-      hostName: String(hostName || "Host").trim().slice(0, 40) || "Host",
-      hostId: socket.id,
-      hostKey: crypto.randomBytes(16).toString("hex"),
-      viewers: new Set(),
-      pending: new Map(),
-      streaming: false
-    };
+    roomId = roomId.trim().toUpperCase();
+    if (!roomId) return;
 
-    rooms.set(roomId, room);
-    socketRooms.set(socket.id, roomId);
-    socket.join(roomId);
+    let room = rooms.get(roomId);
+    if (!room) {
+      room = createRoomObject(roomId);
+      rooms.set(roomId, room);
+    }
 
-    socket.emit("room-created", {
-      roomId,
-      hostKey: room.hostKey
-    });
+    socket.roomId = roomId;
+    socket.isHost = Boolean(isHost);
 
-    updateRooms();
-    roomStatus(roomId);
-  });
+    if (socket.isHost) {
+      if (room.hostId && room.hostId !== socket.id) {
+        socket.emit("host-denied");
+        return;
+      }
 
-  socket.on("rejoin-host", ({ roomId, hostKey } = {}) => {
-    const room = rooms.get(roomId);
+      room.hostId = socket.id;
+      room.hostName = String(name || "Host").trim().slice(0, 40) || "Host";
+      socket.viewerName = room.hostName;
+      socket.join(roomId);
 
-    if (
-      !room ||
-      room.hostKey !== hostKey ||
-      (room.hostId && room.hostId !== socket.id)
-    ) {
-      socket.emit("host-unavailable");
+      socket.emit("joined-room", {
+        roomId,
+        isHost: true,
+        isStreaming: room.streaming
+      });
+
+      socket.emit("pending-list", Array.from(room.pending.entries()).map(([viewerId, data]) => ({
+        viewerId,
+        name: data.name
+      })));
+
+      sendRoomStatus(roomId);
+      broadcastRooms();
       return;
     }
 
-    room.hostId = socket.id;
-    socketRooms.set(socket.id, roomId);
-    socket.join(roomId);
+    const viewerName = String(name || "Visitante").trim().slice(0, 40) || "Visitante";
+    socket.viewerName = viewerName;
 
-    updateRooms();
-    roomStatus(roomId);
-  });
+    if (room.hostId === socket.id || room.viewers.has(socket.id)) return;
 
-  socket.on("request-access", ({ roomId, viewerName } = {}) => {
-    const room = rooms.get(roomId);
-
-    if (!room || !room.hostId) {
-      socket.emit("access-unavailable");
-      return;
-    }
-
-    const name =
-      String(viewerName || "Visitante").trim().slice(0, 40) ||
-      "Visitante";
-
-    socketRooms.set(socket.id, roomId);
-    room.pending.set(socket.id, { name });
-
-    io.to(room.hostId).emit("access-request", {
-      viewerId: socket.id,
-      viewerName: name
+    room.pending.set(socket.id, {
+      name: viewerName,
+      createdAt: Date.now()
     });
 
-    socket.emit("access-pending", {
-      roomName: room.name
-    });
+    socket.emit("join-pending", { roomId, name: viewerName });
+
+    if (room.hostId) {
+      io.to(room.hostId).emit("join-request", {
+        viewerId: socket.id,
+        name: viewerName
+      });
+    } else {
+      room.pending.delete(socket.id);
+      socket.emit("join-denied", {
+        reason: "A sala ainda não possui host."
+      });
+    }
   });
 
-  socket.on("approve-access", ({ viewerId } = {}) => {
-    const roomId = socketRooms.get(socket.id);
+  socket.on("approve-viewer", ({ roomId, viewerId } = {}) => {
+    roomId = String(roomId || "").trim().toUpperCase();
     const room = rooms.get(roomId);
+    if (!room || room.hostId !== socket.id) return;
 
-    if (
-      !room ||
-      room.hostId !== socket.id ||
-      !room.pending.has(viewerId)
-    ) {
-      return;
-    }
+    const request = room.pending.get(viewerId);
+    if (!request) return;
 
+    const viewerSocket = io.sockets.sockets.get(viewerId);
     room.pending.delete(viewerId);
-    room.viewers.add(viewerId);
 
-    const viewer = io.sockets.sockets.get(viewerId);
-
-    if (viewer) {
-      viewer.join(roomId);
+    if (!viewerSocket) {
+      sendRoomStatus(room.id);
+      broadcastRooms();
+      return;
     }
 
-    io.to(viewerId).emit("access-approved", {
-      roomName: room.name,
+    room.viewers.add(viewerId);
+    viewerSocket.roomId = room.id;
+    viewerSocket.isHost = false;
+    viewerSocket.viewerName = request.name;
+    viewerSocket.join(room.id);
+
+    viewerSocket.emit("join-approved", {
+      roomId: room.id,
+      name: request.name,
       isStreaming: room.streaming
     });
 
-    updateRooms();
-    roomStatus(roomId);
+    if (room.streaming) viewerSocket.emit("stream-is-live");
+
+    sendRoomStatus(room.id);
+    broadcastRooms();
   });
 
-  socket.on("reject-access", ({ viewerId } = {}) => {
-    const roomId = socketRooms.get(socket.id);
+  socket.on("deny-viewer", ({ roomId, viewerId } = {}) => {
+    roomId = String(roomId || "").trim().toUpperCase();
     const room = rooms.get(roomId);
-
-    if (
-      !room ||
-      room.hostId !== socket.id ||
-      !room.pending.has(viewerId)
-    ) {
-      return;
-    }
+    if (!room || room.hostId !== socket.id) return;
 
     room.pending.delete(viewerId);
-    socketRooms.delete(viewerId);
 
-    io.to(viewerId).emit("access-rejected");
+    const viewerSocket = io.sockets.sockets.get(viewerId);
+    if (viewerSocket) {
+      viewerSocket.emit("join-denied", {
+        reason: "O host recusou seu pedido para entrar."
+      });
+    }
+
+    sendRoomStatus(room.id);
+    broadcastRooms();
   });
 
-  socket.on("host-live", () => {
-    const room = rooms.get(socketRooms.get(socket.id));
-
+  socket.on("host-live", ({ roomId } = {}) => {
+    const room = rooms.get(String(roomId || "").trim().toUpperCase());
     if (!room || room.hostId !== socket.id) return;
 
     room.streaming = true;
-
-    io.to(room.id).emit("stream-is-live");
-    updateRooms();
-    roomStatus(room.id);
+    socket.to(room.id).emit("stream-is-live");
+    sendRoomStatus(room.id);
+    broadcastRooms();
   });
 
-  socket.on("host-stop", () => {
-    const room = rooms.get(socketRooms.get(socket.id));
-
+  socket.on("host-stop", ({ roomId } = {}) => {
+    const room = rooms.get(String(roomId || "").trim().toUpperCase());
     if (!room || room.hostId !== socket.id) return;
 
     room.streaming = false;
-
-    io.to(room.id).emit("stream-stopped");
-    updateRooms();
-    roomStatus(room.id);
+    socket.to(room.id).emit("stream-stopped");
+    sendRoomStatus(room.id);
+    broadcastRooms();
   });
 
-  socket.on("request-stream", () => {
-    const room = rooms.get(socketRooms.get(socket.id));
-
-    if (
-      !room ||
-      !room.streaming ||
-      !room.viewers.has(socket.id)
-    ) {
-      return;
-    }
+  socket.on("request-stream", ({ roomId } = {}) => {
+    const room = rooms.get(String(roomId || "").trim().toUpperCase());
+    if (!room || !room.hostId || !room.streaming) return;
+    if (!room.viewers.has(socket.id)) return;
 
     io.to(room.hostId).emit("viewer-ready", {
       viewerId: socket.id
     });
   });
 
-  socket.on("webrtc-offer", ({ to, offer } = {}) => {
-    const room = rooms.get(socketRooms.get(socket.id));
+  socket.on("chat-message", ({ message } = {}) => {
+    const room = rooms.get(socket.roomId);
+    if (!room) return;
 
-    if (
-      room &&
-      room.hostId === socket.id &&
-      room.viewers.has(to)
-    ) {
-      io.to(to).emit("webrtc-offer", {
-        from: socket.id,
-        offer
-      });
-    }
+    if (room.hostId !== socket.id && !room.viewers.has(socket.id)) return;
+
+    const text = String(message || "").trim().slice(0, 500);
+    if (!text) return;
+
+    const sender = room.hostId === socket.id
+      ? (room.hostName || "Host")
+      : (socket.viewerName || "Visitante");
+
+    io.to(room.id).emit("chat-message", {
+      sender,
+      message: text,
+      isHost: room.hostId === socket.id
+    });
+  });
+
+  socket.on("webrtc-offer", ({ to, offer } = {}) => {
+    if (!to || !offer) return;
+    io.to(to).emit("webrtc-offer", {
+      from: socket.id,
+      offer
+    });
   });
 
   socket.on("webrtc-answer", ({ to, answer } = {}) => {
-    const room = rooms.get(socketRooms.get(socket.id));
-
-    if (
-      room &&
-      room.hostId === to &&
-      room.viewers.has(socket.id)
-    ) {
-      io.to(to).emit("webrtc-answer", {
-        from: socket.id,
-        answer
-      });
-    }
+    if (!to || !answer) return;
+    io.to(to).emit("webrtc-answer", {
+      from: socket.id,
+      answer
+    });
   });
 
   socket.on("webrtc-ice", ({ to, candidate } = {}) => {
-    const room = rooms.get(socketRooms.get(socket.id));
-
-    if (!room || !candidate) return;
-
-    const valid =
-      (room.hostId === socket.id && room.viewers.has(to)) ||
-      (room.hostId === to && room.viewers.has(socket.id));
-
-    if (valid) {
-      io.to(to).emit("webrtc-ice", {
-        from: socket.id,
-        candidate
-      });
-    }
+    if (!to || !candidate) return;
+    io.to(to).emit("webrtc-ice", {
+      from: socket.id,
+      candidate
+    });
   });
 
   socket.on("disconnect", () => {
-    const roomId = socketRooms.get(socket.id);
+    console.log("Desconectado:", socket.id);
 
-    socketRooms.delete(socket.id);
+    const roomId = socket.roomId;
+    if (!roomId) return;
 
     const room = rooms.get(roomId);
-
     if (!room) return;
 
-    room.pending.delete(socket.id);
-    room.viewers.delete(socket.id);
-
-    if (room.hostId === socket.id) {
+    if (socket.isHost && room.hostId === socket.id) {
       room.hostId = null;
       room.streaming = false;
+      io.to(roomId).emit("host-left");
 
-      io.to(room.id).emit("host-left");
-
-      setTimeout(() => {
-        const current = rooms.get(room.id);
-
-        if (current && !current.hostId) {
-          rooms.delete(room.id);
-          updateRooms();
+      for (const viewerId of room.pending.keys()) {
+        const pendingSocket = io.sockets.sockets.get(viewerId);
+        if (pendingSocket) {
+          pendingSocket.emit("join-denied", {
+            reason: "O host saiu da sala."
+          });
         }
-      }, 15000);
+      }
+      room.pending.clear();
     } else {
-      roomStatus(room.id);
+      room.viewers.delete(socket.id);
+      room.pending.delete(socket.id);
     }
 
-    updateRooms();
+    sendRoomStatus(roomId);
+    broadcastRooms();
+
+    if (room.viewers.size === 0 && room.pending.size === 0 && !room.hostId) {
+      rooms.delete(roomId);
+      broadcastRooms();
+    }
   });
 });
+
+setInterval(() => {
+  const now = Date.now();
+
+  for (const [roomId, room] of rooms) {
+    if (now - room.createdAt > 12 * 60 * 60 * 1000) {
+      io.to(roomId).emit("room-expired");
+      rooms.delete(roomId);
+    }
+  }
+
+  broadcastRooms();
+}, 10 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log("ScreenRoom rodando na porta " + PORT);
 });
+
