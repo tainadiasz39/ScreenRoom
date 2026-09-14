@@ -26,7 +26,8 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 }
 
 .dock-bar { height:68px; background:#0d111c; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 18px; flex-shrink:0; }
-.dbtn { background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.1); padding:9px 16px; border-radius:12px; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+.dbtn { background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.1); padding:9px 16px; border-radius:12px; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s; }
+.dbtn:hover { background:rgba(255,255,255,0.15); transform:translateY(-1px); }
 .dbtn.pri { background:linear-gradient(135deg,#6366f1,#4f46e5); border:none; }
 .dbtn.danger { background:#ef4444; border:none; }
 
@@ -35,6 +36,52 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 
 .toast { position:fixed; bottom:85px; left:50%; transform:translateX(-50%); background:#1f2937; border:1px solid #6366f1; color:#fff; padding:10px 20px; border-radius:25px; font-size:0.85rem; opacity:0; transition:0.3s; pointer-events:none; z-index:100; }
 .toast.show { opacity:1; }
+
+/* ================= MODAL ESTILO DISCORD ================= */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
+  display:none; align-items:center; justify-content:center; z-index:1000;
+}
+.modal-overlay.active { display:flex; }
+.discord-modal {
+  background:#313338; width:90%; max-width:480px; border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.5); overflow:hidden;
+  animation: modalScale 0.15s ease-out;
+}
+@keyframes modalScale { from { transform:scale(0.95); opacity:0; } to { transform:scale(1); opacity:1; } }
+.modal-header { padding:24px 16px 8px; text-align:center; }
+.modal-header h2 { font-size:1.25rem; font-weight:700; color:#f2f3f5; }
+.modal-header p { font-size:0.85rem; color:#b5bac1; margin-top:4px; }
+.modal-body { padding:16px; }
+
+.share-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+.share-opt-card {
+  background:#2b2d31; border:2px solid transparent; border-radius:8px;
+  padding:16px; text-align:center; cursor:pointer; transition:0.15s;
+}
+.share-opt-card:hover { background:#35373c; }
+.share-opt-card.active { border-color:#5865f2; background:#383a40; }
+.share-opt-card .icon { font-size:2rem; margin-bottom:8px; }
+.share-opt-card .title { font-size:0.9rem; font-weight:700; color:#fff; }
+.share-opt-card .sub { font-size:0.75rem; color:#94a3b8; margin-top:2px; }
+
+.audio-guide-box {
+  background:#1e1f22; border-radius:8px; padding:12px;
+  display:flex; align-items:center; gap:12px; font-size:0.8rem; line-height:1.4; color:#b5bac1;
+}
+.audio-guide-box .warning-icon { font-size:1.5rem; }
+
+.modal-footer {
+  background:#2b2d31; padding:16px; display:flex; justify-content:flex-end; gap:12px;
+}
+.modal-btn {
+  padding:10px 24px; border-radius:4px; font-size:0.88rem; font-weight:600;
+  border:none; cursor:pointer; transition:0.2s;
+}
+.modal-btn-cancel { background:transparent; color:#fff; }
+.modal-btn-cancel:hover { text-decoration:underline; }
+.modal-btn-primary { background:#5865f2; color:#fff; }
+.modal-btn-primary:hover { background:#4752c4; }
 </style>
 </head>
 <body>
@@ -52,25 +99,59 @@ video { width:100%; height:100%; max-height:calc(100vh - 130px); object-fit:cont
 </div>
 
 <div class="stage" id="stageArea">
-  <button class="unmute-banner" id="unmuteBtn" onclick="enableAudio()">🔊 Clique para Ativar o Áudio</button>
+  <button class="unmute-banner" id="unmuteBtn" onclick="enableAudio()">🔊 Clique para Ouvir a Transmissão</button>
   
   <div id="emptyState" style="text-align:center; color:#94a3b8;">
     <div style="font-size:3.5rem;">🖥️</div>
     <h3 style="color:#fff; margin:6px 0;" id="emptyTitle">Aguardando Transmissão</h3>
-    <p style="font-size:0.85rem;" id="emptySub">O host ainda não iniciou a tela.</p>
+    <p style="font-size:0.85rem;">O host ainda não iniciou a tela.</p>
   </div>
   <video id="screenVideo" autoplay playsinline style="display:none;" ondblclick="toggleFullscreen()"></video>
 </div>
 
 <div class="dock-bar">
   <div style="display:flex; gap:8px;">
-    <button class="dbtn pri" id="btnStream" onclick="toggleStream()" style="display:none;">📡 Transmitir Tela</button>
+    <button class="dbtn pri" id="btnStream" onclick="openDiscordModal()" style="display:none;">📡 Compartilhar Tela</button>
   </div>
   <div style="display:flex; gap:10px; align-items:center;">
-    <button class="dbtn" id="btnMute" onclick="toggleMute()">🔊</button>
+    <button class="dbtn" id="btnMute" onclick="toggleMute()">🔊 Som</button>
     <input type="range" class="vslider" id="volSlider" min="0" max="100" value="100" oninput="setVolume(this.value)">
     <button class="dbtn" onclick="toggleFullscreen()">⛶ Tela Cheia</button>
     <button class="dbtn" onclick="copyLink()">📋 Copiar Link</button>
+  </div>
+</div>
+
+<!-- ================= MODAL ESTILO DISCORD ================= -->
+<div class="modal-overlay" id="discordModal">
+  <div class="discord-modal">
+    <div class="modal-header">
+      <h2>Compartilhe sua tela</h2>
+      <p>Escolha o modo de transmissão ideal para sua gameplay</p>
+    </div>
+    <div class="modal-body">
+      <div class="share-options">
+        <div class="share-opt-card active" onclick="selectShareOpt('screen')" id="optScreen">
+          <div class="icon">🖥️</div>
+          <div class="title">Tela Inteira</div>
+          <div class="sub">Gamer (Com Áudio)</div>
+        </div>
+        <div class="share-opt-card" onclick="selectShareOpt('window')" id="optWindow">
+          <div class="icon">🎮</div>
+          <div class="title">Janelas do App</div>
+          <div class="sub">Foco (Apenas Vídeo)</div>
+        </div>
+      </div>
+      <div class="audio-guide-box">
+        <div class="warning-icon">🔊</div>
+        <div id="audioGuideText">
+          <strong>Dica do Som:</strong> Para transmitir o áudio do jogo, selecione "Tela Inteira" e lembre-se de marcar a caixinha <strong>"Compartilhar áudio do sistema"</strong> no pop-up do navegador!
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-cancel" onclick="closeDiscordModal()">Cancelar</button>
+      <button class="modal-btn modal-btn-primary" onclick="startDiscordStream()">Go Live</button>
+    </div>
   </div>
 </div>
 
@@ -93,6 +174,7 @@ const unmuteBtn = document.getElementById('unmuteBtn');
 let localStream = null;
 let peerConnections = {};
 let iceCandidatesQueue = {};
+let selectedStreamType = 'screen'; // 'screen' ou 'window'
 
 const rtcConfig = {
   iceServers: [
@@ -100,21 +182,8 @@ const rtcConfig = {
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelay',
-      credential: 'openrelay'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelay',
-      credential: 'openrelay'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelay',
-      credential: 'openrelay'
-    }
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' }
   ],
   iceCandidatePoolSize: 10
 };
@@ -136,50 +205,89 @@ socket.emit('join-room', { roomId, isHost: (role === 'host') });
 if (role === 'host') {
   document.getElementById('btnStream').style.display = 'inline-flex';
   document.getElementById('emptyTitle').textContent = 'Você é o Host';
-  document.getElementById('emptySub').textContent = 'Clique em "Transmitir Tela" para compartilhar com áudio.';
+  document.getElementById('emptySub').textContent = 'Clique em "Compartilhar Tela" para escolher o seu jogo.';
   setStatus('Host Pronto', true);
 }
 
-async function toggleStream() {
-  if (!localStream) {
-    try {
-      localStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: true
-      });
-
-      video.srcObject = localStream;
-      video.muted = true;
-      video.style.display = 'block';
-      emptyState.style.display = 'none';
-
-      document.getElementById('btnStream').className = 'dbtn danger';
-      document.getElementById('btnStream').innerHTML = '⏹️ Parar Transmissão';
-      setStatus('Ao Vivo (60 FPS)', true);
-
-      socket.emit('stream-state', { roomId, isStreaming: true });
-
-      localStream.getVideoTracks()[0].onended = () => toggleStream();
-    } catch (err) {
-      alert('Aviso: Selecione uma tela ou janela para transmitir.');
-    }
+// ======================== MODAL DISCORD LOGIC ========================
+function openDiscordModal() {
+  if (localStream) {
+    // Se já estiver transmitindo, apenas para
+    stopStreaming();
   } else {
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
-    video.style.display = 'none';
-    emptyState.style.display = 'block';
-
-    document.getElementById('btnStream').className = 'dbtn pri';
-    document.getElementById('btnStream').innerHTML = '📡 Transmitir Tela';
-    setStatus('Transmissão Parada', false);
-
-    socket.emit('stream-state', { roomId, isStreaming: false });
-
-    for (let id in peerConnections) peerConnections[id].close();
-    peerConnections = {};
+    document.getElementById('discordModal').classList.add('active');
   }
 }
 
+function closeDiscordModal() {
+  document.getElementById('discordModal').classList.remove('active');
+}
+
+function selectShareOpt(type) {
+  selectedStreamType = type;
+  document.getElementById('optScreen').classList.toggle('active', type === 'screen');
+  document.getElementById('optWindow').classList.toggle('active', type === 'window');
+  
+  const guide = document.getElementById('audioGuideText');
+  if (type === 'screen') {
+    guide.innerHTML = '<strong>Dica do Som:</strong> Selecione "Tela Inteira" e lembre-se de marcar a caixinha <strong>"Compartilhar áudio do sistema"</strong> no pop-up do navegador!';
+  } else {
+    guide.innerHTML = '<strong>Aviso do Som:</strong> Transmitir apenas uma "Janela" isolada do Windows silencia o áudio devido a limitações do sistema operacional. Para som, use "Tela Inteira"!';
+  }
+}
+
+async function startDiscordStream() {
+  closeDiscordModal();
+  try {
+    const displayMediaOptions = {
+      video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: selectedStreamType === 'screen' ? {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      } : false
+    };
+
+    localStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+
+    video.srcObject = localStream;
+    video.muted = true;
+    video.style.display = 'block';
+    emptyState.style.display = 'none';
+
+    const btn = document.getElementById('btnStream');
+    btn.className = 'dbtn danger';
+    btn.innerHTML = '⏹️ Parar Transmissão';
+    setStatus('Ao Vivo (60 FPS)', true);
+
+    socket.emit('stream-state', { roomId, isStreaming: true });
+
+    localStream.getVideoTracks()[0].onended = () => stopStreaming();
+  } catch (err) {
+    showToast('Transmissão cancelada');
+  }
+}
+
+function stopStreaming() {
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  video.style.display = 'none';
+  emptyState.style.display = 'block';
+
+  const btn = document.getElementById('btnStream');
+  btn.className = 'dbtn pri';
+  btn.innerHTML = '📡 Compartilhar Tela';
+  setStatus('Transmissão Parada', false);
+
+  socket.emit('stream-state', { roomId, isStreaming: false });
+
+  for (let id in peerConnections) peerConnections[id].close();
+  peerConnections = {};
+}
+
+// ======================== WEBRTC MESH ========================
 socket.on('new-viewer', async (viewerId) => {
   if (!localStream) return;
   if (peerConnections[viewerId]) peerConnections[viewerId].close();
@@ -194,6 +302,9 @@ socket.on('new-viewer', async (viewerId) => {
   };
 
   const offer = await pc.createOffer();
+  // Força áudio Stereo de alta qualidade no SDP
+  offer.sdp = offer.sdp.replace(/useinbandfec=1/g, "useinbandfec=1;stereo=1;sprop-stereo=1;maxaveragebitrate=128000");
+  
   await pc.setLocalDescription(offer);
   socket.emit('signal-offer', { to: viewerId, offer });
 });
@@ -231,7 +342,10 @@ socket.on('signal-offer', async ({ from, offer }) => {
     emptyState.style.display = 'none';
     setStatus('Ao Vivo', true);
 
-    video.play().catch(() => {
+    // Tenta reproduzir o som automaticamente
+    video.play().then(() => {
+      unmuteBtn.style.display = 'none';
+    }).catch(() => {
       video.muted = true;
       video.play();
       unmuteBtn.style.display = 'block';
@@ -266,6 +380,7 @@ socket.on('host-left', () => {
   video.style.display = 'none';
   emptyState.style.display = 'block';
   setStatus('Host Saiu', false);
+  unmuteBtn.style.display = 'none';
 });
 
 socket.on('room-status', (d) => {
@@ -275,23 +390,24 @@ socket.on('room-status', (d) => {
   }
 });
 
+// ======================== CONTROLES ========================
 function enableAudio() {
   video.muted = false;
   video.volume = 1;
   document.getElementById('volSlider').value = 100;
-  document.getElementById('btnMute').textContent = '🔊';
+  document.getElementById('btnMute').textContent = '🔊 Som';
   unmuteBtn.style.display = 'none';
 }
 
 function setVolume(v) {
   video.volume = v / 100;
   video.muted = (v == 0);
-  document.getElementById('btnMute').textContent = (v == 0) ? '🔇' : '🔊';
+  document.getElementById('btnMute').textContent = (v == 0) ? '🔇 Mudo' : '🔊 Som';
 }
 
 function toggleMute() {
   video.muted = !video.muted;
-  document.getElementById('btnMute').textContent = video.muted ? '🔇' : '🔊';
+  document.getElementById('btnMute').textContent = video.muted ? '🔇 Mudo' : '🔊 Som';
 }
 
 function toggleFullscreen() {
