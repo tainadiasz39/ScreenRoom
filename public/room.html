@@ -2,89 +2,102 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ScreenRoom HD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ScreenRoom</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;background:#111214;color:#dbdee1;font-family:Arial,Helvetica,sans-serif}
-body{display:flex;flex-direction:column}
+html,body{margin:0;width:100%;height:100%;background:#111214;color:#dbdee1;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+body{display:flex;flex-direction:column;overflow:hidden}
+
 .top{
-  height:54px;background:#2b2d31;border-bottom:1px solid #1e1f22;
-  display:flex;align-items:center;justify-content:space-between;padding:0 14px
+  height:52px;background:#2b2d31;border-bottom:1px solid #1e1f22;
+  display:flex;align-items:center;justify-content:space-between;padding:0 12px;
+  flex-shrink:0;
 }
-.top .name{font-weight:bold;color:#fff;display:flex;align-items:center;gap:8px}
-.top .meta{color:#b5bac1;font-size:13px}
+.top .name{font-weight:bold;color:#fff;display:flex;align-items:center;gap:6px;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top .meta{color:#b5bac1;font-size:12px;white-space:nowrap}
 .badge-live{background:#ed4245;color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px;display:none}
 .badge-live.show{display:inline-block}
 
 .btn{
-  height:36px;border:0;border-radius:8px;background:#5865f2;color:#fff;
-  font-weight:bold;padding:0 12px;cursor:pointer;transition:0.15s
+  height:38px;border:0;border-radius:8px;background:#5865f2;color:#fff;
+  font-weight:bold;padding:0 12px;cursor:pointer;transition:0.15s;font-size:13px;
+  touch-action:manipulation;
 }
+.btn:active{transform:scale(0.97)}
 .btn:hover{background:#4752c4}
 .btn.gray{background:#4e5058}
 .btn.gray:hover{background:#6d6f78}
 .btn.red{background:#da373c}
 .btn.red:hover{background:#b82e33}
 
-.layout{flex:1;min-height:0;display:grid;grid-template-columns:1fr 310px;gap:12px;padding:12px}
-@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:1fr 300px;gap:10px;padding:10px;overflow-y:auto}
+@media(max-width:820px){
+  .layout{ grid-template-columns:1fr; grid-template-rows:auto auto; padding:8px; gap:8px; }
+}
 
 .stage{
   background:#0c0d0e;border-radius:12px;position:relative;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;min-height:320px
+  display:flex;align-items:center;justify-content:center;min-height:220px;
+  aspect-ratio:16/9;width:100%;
 }
+@media(max-width:820px){
+  .stage{ min-height:200px; height:auto; }
+}
+
 video{width:100%;height:100%;object-fit:contain;background:#000;display:none}
 video.active{display:block}
-.placeholder{text-align:center;color:#b5bac1;padding:20px}
-.placeholder h2{color:#fff;margin:0 0 8px}
+.placeholder{text-align:center;color:#b5bac1;padding:16px}
+.placeholder h2{color:#fff;margin:0 0 6px;font-size:18px}
+.placeholder p{margin:0;font-size:13px}
 
 .play-overlay{
-  position:absolute;inset:0;background:rgba(17,18,20,0.92);
+  position:absolute;inset:0;background:rgba(17,18,20,0.94);
   display:none;flex-direction:column;align-items:center;justify-content:center;
-  z-index:30;gap:16px;text-align:center;padding:20px
+  z-index:30;gap:12px;text-align:center;padding:16px
 }
 .play-overlay.show{display:flex}
 .play-btn{
-  background:#23a55a;color:#fff;font-size:18px;font-weight:bold;
-  padding:14px 28px;border:0;border-radius:8px;cursor:pointer;transition:0.2s
+  background:#23a55a;color:#fff;font-size:16px;font-weight:bold;
+  padding:14px 24px;border:0;border-radius:10px;cursor:pointer;transition:0.2s;
+  box-shadow:0 4px 20px rgba(35,165,90,0.4);touch-action:manipulation;
 }
-.play-btn:hover{background:#1e8b4c;transform:scale(1.03)}
+.play-btn:active{transform:scale(0.96)}
 
 .stats-hud{
-  position:absolute;top:12px;left:12px;background:rgba(17,18,20,0.85);
+  position:absolute;top:10px;left:10px;background:rgba(17,18,20,0.85);
   backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);
-  border-radius:8px;padding:8px 12px;font-family:monospace;font-size:11px;
+  border-radius:8px;padding:6px 10px;font-family:monospace;font-size:10px;
   color:#23a55a;display:none;z-index:20
 }
 .stats-hud.show{display:block}
-.stats-hud div{margin-bottom:3px}
+.stats-hud div{margin-bottom:2px}
 .stats-hud .val{color:#fff;font-weight:bold}
 
-.side{display:flex;flex-direction:column;gap:12px}
+.side{display:flex;flex-direction:column;gap:10px}
 .panel{background:#2b2d31;border-radius:12px;padding:12px}
-.panel h3{margin:0 0 10px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.panel h3{margin:0 0 10px;font-size:13px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;color:#949ba4}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padding:0 8px;outline:none}
+select{height:38px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padding:0 8px;outline:none;font-size:13px}
 
-.requests{max-height:180px;overflow:auto}
+.requests{max-height:160px;overflow-y:auto}
 .req{background:#1e1f22;border-radius:8px;padding:10px;margin-bottom:8px}
-.req p{margin:0 0 8px;font-weight:bold;color:#fff}
+.req p{margin:0 0 8px;font-weight:bold;color:#fff;font-size:14px}
 .req .actions{display:flex;gap:8px}
-.req button{flex:1;height:30px}
+.req button{flex:1;height:34px}
 
-.chat{display:flex;flex-direction:column;min-height:220px;flex:1}
+.chat{display:flex;flex-direction:column;min-height:200px;flex:1}
 .chat-log{
-  flex:1;background:#1e1f22;border-radius:8px;padding:10px;overflow:auto;
-  min-height:120px;max-height:260px;font-size:13px
+  flex:1;background:#1e1f22;border-radius:8px;padding:10px;overflow-y:auto;
+  min-height:110px;max-height:220px;font-size:13px
 }
-.chat-line{margin-bottom:6px;word-break:break-word}
+.chat-line{margin-bottom:6px;word-break:break-word;line-height:1.3}
 .chat-line .who{color:#5865f2;font-weight:bold}
 .chat-line .who.host{color:#23a55a}
 .chat-line.system{color:#949ba4;font-style:italic}
 .chat-form{display:flex;gap:8px;margin-top:8px}
 .chat-form input{
-  flex:1;height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padding:0 10px;outline:none
+  flex:1;height:38px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padding:0 10px;outline:none;font-size:14px
 }
 
 .overlay{
@@ -93,12 +106,13 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
 }
 .overlay.show{display:flex}
 .overlay-card{
-  width:min(420px,100%);background:#2b2d31;border-radius:12px;padding:24px;text-align:center
+  width:min(420px,100%);background:#2b2d31;border-radius:14px;padding:20px;text-align:center
 }
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  background:#2b2d31;border:1px solid #3f4147;color:#fff;padding:10px 14px;
-  border-radius:8px;opacity:0;transition:.2s;z-index:70;pointer-events:none
+  background:#2b2d31;border:1px solid #3f4147;color:#fff;padding:8px 16px;
+  border-radius:8px;opacity:0;transition:.2s;z-index:70;pointer-events:none;font-size:13px;
+  max-width:90%;text-align:center;
 }
 .toast.show{opacity:1}
 </style>
@@ -111,7 +125,7 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
     <span class="badge-live" id="liveBadge">AO VIVO</span>
   </div>
   <div class="meta">👥 <span id="viewerCount">0</span> assistindo</div>
-  <button class="btn gray" onclick="location.href='/'">Voltar às salas</button>
+  <button class="btn gray" onclick="location.href='/'">Sair</button>
 </header>
 
 <main class="layout">
@@ -123,11 +137,10 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
       <div>PING: <span class="val" id="hudPing">0 ms</span></div>
     </div>
 
-    <!-- BOTÃO PARA O ESPECTADOR DESBLOQUEAR ÁUDIO/VÍDEO -->
     <div class="play-overlay" id="playOverlay">
-      <div style="font-size:48px;">📡</div>
-      <h2 style="margin:0;color:#fff;">Transmissão ao vivo iniciada!</h2>
-      <p style="margin:0;color:#b5bac1;">Clique abaixo para assistir com áudio e imagem.</p>
+      <div style="font-size:42px;">📡</div>
+      <h2 style="margin:0;color:#fff;font-size:18px;">Ao vivo agora!</h2>
+      <p style="margin:0;color:#b5bac1;font-size:13px;">Toque abaixo para assistir com áudio e vídeo.</p>
       <button class="play-btn" onclick="iniciarAssistir()">▶ ASSISTIR AO VIVO</button>
     </div>
 
@@ -135,16 +148,18 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
       <h2 id="phTitle">Conectando...</h2>
       <p id="phText">Aguarde um instante.</p>
     </div>
-    <video id="video" autoplay playsinline></video>
+    
+    <video id="video" autoplay playsinline webkit-playsinline></video>
   </section>
 
   <aside class="side">
+    <!-- CONTROLES DO HOST (EXIBIDOS GARANTIDAMENTE PARA O HOST) -->
     <div class="panel" id="hostControls" style="display:none">
-      <h3>Controles do host</h3>
+      <h3>Controles do Host</h3>
       <div class="row">
-        <label style="font-size:12px;color:#b5bac1;display:flex;align-items:center;gap:6px">
+        <label style="font-size:12px;color:#b5bac1;display:flex;align-items:center;gap:6px;width:100%;">
           Resolução:
-          <select id="resSelect">
+          <select id="resSelect" style="flex:1;">
             <option value="720">720p</option>
             <option value="1080" selected>1080p (60fps)</option>
             <option value="1440">1440p 2K</option>
@@ -152,14 +167,14 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
         </label>
       </div>
       <div class="row">
-        <button class="btn" id="streamBtn" onclick="toggleStream()">📡 Transmitir tela</button>
-        <button class="btn gray" onclick="toggleHud()">📊 Stats HUD</button>
-        <button class="btn gray" onclick="toggleFullscreen()">⛶ Tela cheia</button>
+        <button class="btn" id="streamBtn" style="flex:1;" onclick="toggleStream()">📡 Transmitir Tela</button>
+        <button class="btn gray" onclick="toggleHud()">📊 Stats</button>
+        <button class="btn gray" onclick="toggleFullscreen()">⛶ Cheia</button>
       </div>
     </div>
 
     <div class="panel" id="requestsPanel" style="display:none">
-      <h3>🔔 Pedidos para entrar</h3>
+      <h3>🔔 Pedidos de Entrada</h3>
       <div class="requests" id="requests">
         <div style="color:#949ba4;font-size:13px">Nenhum pedido pendente.</div>
       </div>
@@ -168,20 +183,20 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
     <div class="panel" id="viewerControls" style="display:none">
       <h3>Controles</h3>
       <div class="row">
-        <button class="btn gray" onclick="toggleMute()" id="muteBtn">🔊 Mudo</button>
-        <button class="btn gray" onclick="toggleHud()">📊 Stats HUD</button>
-        <button class="btn gray" onclick="toggleFullscreen()">⛶ Tela cheia</button>
+        <button class="btn gray" onclick="toggleMute()" id="muteBtn" style="flex:1;">🔊 Som</button>
+        <button class="btn gray" onclick="toggleHud()">📊 Stats</button>
+        <button class="btn gray" onclick="toggleFullscreen()">⛶ Tela Cheia</button>
       </div>
-      <input id="volume" type="range" min="0" max="100" value="100" oninput="setVolume(this.value)" style="width:100%">
+      <input id="volume" type="range" min="0" max="100" value="100" oninput="setVolume(this.value)" style="width:100%;margin-top:4px;">
     </div>
 
     <div class="panel chat">
-      <h3>💬 Chat da sala</h3>
+      <h3>💬 Chat da Sala</h3>
       <div class="chat-log" id="chatLog">
         <div class="chat-line system">Nenhuma mensagem ainda.</div>
       </div>
       <form class="chat-form" onsubmit="return sendChat(event)">
-        <input id="chatInput" placeholder="Escreva uma mensagem..." maxlength="300" disabled>
+        <input id="chatInput" placeholder="Digite uma mensagem..." maxlength="300" disabled>
         <button class="btn" id="chatBtn" disabled>Enviar</button>
       </form>
     </div>
@@ -191,8 +206,8 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
 <div class="overlay" id="waitOverlay">
   <div class="overlay-card">
     <div style="font-size:42px;margin-bottom:10px">⏳</div>
-    <h2>Aguardando aprovação</h2>
-    <p id="waitText">O host recebeu seu pedido.</p>
+    <h2 style="margin:0 0 8px;font-size:20px;">Aguardando aprovação</h2>
+    <p id="waitText" style="margin:0 0 16px;color:#b5bac1;font-size:14px;">O host recebeu seu pedido.</p>
     <button class="btn red" onclick="location.href='/'">Voltar</button>
   </div>
 </div>
@@ -207,7 +222,7 @@ const roomId = decodeURIComponent(parts[parts.length-1]).toUpperCase();
 const params = new URLSearchParams(location.search);
 const role = params.get("role");
 const viewerName = (params.get("name") || "Visitante").trim();
-const isHost = role === "host";
+const isHost = (role === "host");
 
 const video = document.getElementById("video");
 const placeholder = document.getElementById("placeholder");
@@ -229,7 +244,7 @@ const streamBtn = document.getElementById("streamBtn");
 const statsHud = document.getElementById("statsHud");
 
 let localStream = null;
-let viewerConnections = new Map(); // Guarda 1 conexão isolada para CADA espectador
+let viewerConnections = new Map();
 let viewerPC = null;
 let pendingIce = [];
 let chatStarted = false;
@@ -238,9 +253,6 @@ let statsInterval = null;
 let lastBytes = 0;
 let lastTimestamp = Date.now();
 
-/* ============================================================
-   STUN + TURN RELAY (Garante conexão entre CASAS e OPERADORAS diferentes)
-   ============================================================ */
 const rtcConfig = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -259,6 +271,15 @@ const rtcConfig = {
   ],
   iceCandidatePoolSize: 10
 };
+
+// SE FOR HOST: EXIBE OS BOTÕES IMEDIATAMENTE NO DOM
+if (isHost) {
+  hostControls.style.display = "block";
+  requestsPanel.style.display = "block";
+  phTitle.textContent = "Você é o host";
+  phText.textContent = "Inicie a transmissão quando estiver pronto.";
+  enableChat();
+}
 
 function toggleHud() { statsHud.classList.toggle("show"); }
 
@@ -347,7 +368,6 @@ function setHostUI(data){
   phTitle.textContent = "Você é o host";
   phText.textContent = "Inicie a transmissão quando estiver pronto.";
   enableChat();
-  addSystem("Você entrou como host.");
 }
 
 function setViewerWaiting(data){
@@ -386,7 +406,7 @@ function resolutionConstraints(){
 }
 
 /* ============================================================
-   HOST - TRANSMISSÃO ANTI-ECO (SISTEMA DE MUTE NO HOST)
+   HOST - TRANSMISSÃO
    ============================================================ */
 async function toggleStream(){
   if (!isHost) return;
@@ -402,8 +422,6 @@ async function toggleStream(){
         }
       });
 
-      // MUTA O VÍDEO NO PC DO HOST PARA NUNCA GERAR ECO LOCAL!
-      // O Host ouve o jogo normalmente no Windows.
       video.srcObject = localStream;
       video.muted = true;
       video.volume = 0;
@@ -442,15 +460,59 @@ async function toggleStream(){
   liveBadge.classList.remove("show");
   phTitle.textContent = "Você é o host";
   phText.textContent = "Inicie a transmissão quando estiver pronto.";
-  streamBtn.textContent = "📡 Transmitir tela";
+  streamBtn.textContent = "📡 Transmitir Tela";
   streamBtn.classList.remove("red");
   socket.emit("host-stop");
 }
 
 /* ============================================================
-   SINALIZAÇÃO WEBRTC MULTI-VIEWER (1 HOST -> N VIEWERS)
+   REGISTRO DOS EVENTOS DO SOCKET (ANTES DA CONEXÃO)
    ============================================================ */
+socket.on("join-error", (msg) => { alert(msg || "Não foi possível entrar."); location.href = "/"; });
+socket.on("host-ready", (data) => { setHostUI(data); viewerCount.textContent = data.viewers || 0; });
+socket.on("waiting-approval", (data) => setViewerWaiting(data));
+socket.on("entry-approved", (data) => setViewerApproved(data));
+socket.on("entry-rejected", () => { alert("Seu pedido foi recusado."); location.href = "/"; });
 
+socket.on("entry-requested", ({ viewerId, nickname }) => {
+  if (!isHost) return;
+  if (document.getElementById("req_" + viewerId)) return;
+  if (requestsEl.querySelector("div[style]")) requestsEl.innerHTML = "";
+
+  const box = document.createElement("div");
+  box.className = "req";
+  box.id = "req_" + viewerId;
+  box.innerHTML = `
+    <p>${escapeHTML(nickname)}</p>
+    <div class="actions">
+      <button class="btn" onclick="decidir('${viewerId}', true)">Aceitar</button>
+      <button class="btn red" onclick="decidir('${viewerId}', false)">Recusar</button>
+    </div>
+  `;
+  requestsEl.appendChild(box);
+  toast("Pedido: " + nickname);
+});
+
+socket.on("viewer-disconnected", ({ viewerId }) => {
+  const el = document.getElementById("req_" + viewerId);
+  if (el) el.remove();
+  if (!requestsEl.children.length) {
+    requestsEl.innerHTML = '<div style="color:#949ba4;font-size:13px">Nenhum pedido pendente.</div>';
+  }
+});
+
+function decidir(viewerId, approved){
+  socket.emit("decide-entry", { viewerId, approved });
+  const el = document.getElementById("req_" + viewerId);
+  if (el) el.remove();
+  if (!requestsEl.children.length) {
+    requestsEl.innerHTML = '<div style="color:#949ba4;font-size:13px">Nenhum pedido pendente.</div>';
+  }
+}
+
+/* ============================================================
+   WEBRTC MULTI-VIEWER
+   ============================================================ */
 socket.on("viewer-ready", async ({ viewerId }) => {
   if (!isHost || !localStream) return;
 
@@ -459,7 +521,6 @@ socket.on("viewer-ready", async ({ viewerId }) => {
       try { viewerConnections.get(viewerId).close(); } catch {}
     }
 
-    // Cria uma conexão exclusiva para CADA espectador
     const pc = new RTCPeerConnection(rtcConfig);
     viewerConnections.set(viewerId, pc);
 
@@ -510,7 +571,6 @@ socket.on("webrtc-offer", async ({ from, offer }) => {
       playOverlay.classList.remove("show");
       liveBadge.classList.add("show");
 
-      // ESPECTADOR OUVE O SOM EM VOLUME MÁXIMO
       video.muted = false;
       video.volume = 1.0;
 
@@ -519,7 +579,7 @@ socket.on("webrtc-offer", async ({ from, offer }) => {
       } catch (err) {
         video.muted = true;
         await video.play().catch(()=>{});
-        toast("Clique na tela para liberar o áudio");
+        toast("Toque na tela para ativar o som");
       }
 
       startStatsMonitoring();
@@ -581,10 +641,6 @@ socket.on("webrtc-ice", async ({ from, candidate }) => {
   }
 });
 
-/* ============================================================
-   EVENTOS DA SALA
-   ============================================================ */
-
 socket.on("stream-is-live", () => {
   if (isHost) return;
   liveBadge.classList.add("show");
@@ -634,19 +690,39 @@ socket.on("chat-system", (msg) => addSystem(msg.text));
 function setVolume(v){
   video.volume = Number(v)/100;
   video.muted = Number(v) === 0;
-  document.getElementById("muteBtn").textContent = video.muted ? "🔇 Som" : "🔊 Mudo";
+  document.getElementById("muteBtn").textContent = video.muted ? "🔇 Som" : "🔊 Som";
 }
 
 function toggleMute(){
   video.muted = !video.muted;
-  document.getElementById("muteBtn").textContent = video.muted ? "🔇 Som" : "🔊 Mudo";
+  document.getElementById("muteBtn").textContent = video.muted ? "🔇 Som" : "🔊 Som";
 }
 
 async function toggleFullscreen(){
   try{
-    if (!document.fullscreenElement) await document.getElementById("stage").requestFullscreen();
-    else await document.exitFullscreen();
+    const stage = document.getElementById("stage");
+    if (!document.fullscreenElement) {
+      if (stage.requestFullscreen) await stage.requestFullscreen();
+      else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    } else {
+      if (document.exitFullscreen) await document.exitFullscreen();
+    }
   }catch{}
+}
+
+/* ============================================================
+   EMISSÃO DO EVENTO INICIAL DE ENTRADA NA SALA
+   ============================================================ */
+if (isHost) {
+  const hostKey = localStorage.getItem("hostKey_" + roomId);
+  if (!hostKey) {
+    alert("Este navegador não tem a chave de dono desta sala. Crie a sala novamente.");
+    location.href = "/";
+  } else {
+    socket.emit("join-host", { roomId, hostKey });
+  }
+} else {
+  socket.emit("request-entry", { roomId, nickname: viewerName });
 }
 
 window.addEventListener("beforeunload", () => {
