@@ -14,7 +14,8 @@ body{display:flex;flex-direction:column}
 }
 .top .name{font-weight:bold;color:#fff;display:flex;align-items:center;gap:8px}
 .top .meta{color:#b5bac1;font-size:13px}
-.badge-hd{background:#5865f2;color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px}
+.badge-live{background:#ed4245;color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px;display:none}
+.badge-live.show{display:inline-block}
 
 .btn{
   height:36px;border:0;border-radius:8px;background:#5865f2;color:#fff;
@@ -38,11 +39,23 @@ video.active{display:block}
 .placeholder{text-align:center;color:#b5bac1;padding:20px}
 .placeholder h2{color:#fff;margin:0 0 8px}
 
+.play-overlay{
+  position:absolute;inset:0;background:rgba(17,18,20,0.92);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  z-index:30;gap:16px;text-align:center;padding:20px
+}
+.play-overlay.show{display:flex}
+.play-btn{
+  background:#23a55a;color:#fff;font-size:18px;font-weight:bold;
+  padding:14px 28px;border:0;border-radius:8px;cursor:pointer;transition:0.2s
+}
+.play-btn:hover{background:#1e8b4c;transform:scale(1.03)}
+
 .stats-hud{
   position:absolute;top:12px;left:12px;background:rgba(17,18,20,0.85);
   backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);
   border-radius:8px;padding:8px 12px;font-family:monospace;font-size:11px;
-  color:#23a55a;display:none;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.4)
+  color:#23a55a;display:none;z-index:20
 }
 .stats-hud.show{display:block}
 .stats-hud div{margin-bottom:3px}
@@ -95,7 +108,7 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
 <header class="top">
   <div class="name">
     <span id="roomTitle">Sala</span>
-    <span class="badge-hd">OPUS HD 192K</span>
+    <span class="badge-live" id="liveBadge">AO VIVO</span>
   </div>
   <div class="meta">👥 <span id="viewerCount">0</span> assistindo</div>
   <button class="btn gray" onclick="location.href='/'">Voltar às salas</button>
@@ -108,7 +121,14 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
       <div>RES: <span class="val" id="hudRes">0x0</span></div>
       <div>BITRATE: <span class="val" id="hudBitrate">0 kbps</span></div>
       <div>PING: <span class="val" id="hudPing">0 ms</span></div>
-      <div>PERDA: <span class="val" id="hudLoss">0%</span></div>
+    </div>
+
+    <!-- BOTÃO PARA O ESPECTADOR DESBLOQUEAR ÁUDIO/VÍDEO -->
+    <div class="play-overlay" id="playOverlay">
+      <div style="font-size:48px;">📡</div>
+      <h2 style="margin:0;color:#fff;">Transmissão ao vivo iniciada!</h2>
+      <p style="margin:0;color:#b5bac1;">Clique abaixo para assistir com áudio e imagem.</p>
+      <button class="play-btn" onclick="iniciarAssistir()">▶ ASSISTIR AO VIVO</button>
     </div>
 
     <div class="placeholder" id="placeholder">
@@ -200,6 +220,8 @@ const requestsPanel = document.getElementById("requestsPanel");
 const requestsEl = document.getElementById("requests");
 const viewerControls = document.getElementById("viewerControls");
 const waitOverlay = document.getElementById("waitOverlay");
+const playOverlay = document.getElementById("playOverlay");
+const liveBadge = document.getElementById("liveBadge");
 const chatLog = document.getElementById("chatLog");
 const chatInput = document.getElementById("chatInput");
 const chatBtn = document.getElementById("chatBtn");
@@ -207,7 +229,7 @@ const streamBtn = document.getElementById("streamBtn");
 const statsHud = document.getElementById("statsHud");
 
 let localStream = null;
-let viewerConnections = new Map();
+let viewerConnections = new Map(); // Guarda 1 conexão isolada para CADA espectador
 let viewerPC = null;
 let pendingIce = [];
 let chatStarted = false;
@@ -216,58 +238,27 @@ let statsInterval = null;
 let lastBytes = 0;
 let lastTimestamp = Date.now();
 
+/* ============================================================
+   STUN + TURN RELAY (Garante conexão entre CASAS e OPERADORAS diferentes)
+   ============================================================ */
 const rtcConfig = {
   iceServers: [
-    { urls: [
-        "stun:stun.l.google.com:19302",
-        "stun:stun1.l.google.com:19302",
-        "stun:stun2.l.google.com:19302"
-      ] 
-    },
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun.cloudflare.com:3478" },
     {
       urls: [
         "turn:openrelay.metered.ca:80",
-        "turn:openrelay.metered.ca:443"
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp"
       ],
       username: "openrelay",
       credential: "openrelay"
     }
-  ]
+  ],
+  iceCandidatePoolSize: 10
 };
-
-function optimizeSDPForHD(sdp) {
-  let lines = sdp.split("\r\n");
-  let opusPayload = null;
-  for (let line of lines) {
-    if (line.includes("a=rtpmap:") && line.toLowerCase().includes("opus/48000")) {
-      opusPayload = line.split(" ")[0].split(":")[1];
-      break;
-    }
-  }
-  if (!opusPayload) return sdp;
-
-  let fmtpModified = false;
-  lines = lines.map(line => {
-    if (line.startsWith(`a=fmtp:${opusPayload}`)) {
-      fmtpModified = true;
-      return `${line};stereo=1;sprop-stereo=1;maxaveragebitrate=196608;cbr=1;maxplaybackrate=48000`;
-    }
-    return line;
-  });
-
-  if (!fmtpModified) {
-    let newLines = [];
-    for (let line of lines) {
-      newLines.push(line);
-      if (line.startsWith(`a=rtpmap:${opusPayload}`)) {
-        newLines.push(`a=fmtp:${opusPayload} stereo=1;sprop-stereo=1;maxaveragebitrate=196608;cbr=1;maxplaybackrate=48000`);
-      }
-    }
-    lines = newLines;
-  }
-  return lines.join("\r\n");
-}
 
 function toggleHud() { statsHud.classList.toggle("show"); }
 
@@ -353,10 +344,10 @@ function setHostUI(data){
   hostControls.style.display = "block";
   requestsPanel.style.display = "block";
   waitOverlay.classList.remove("show");
-  phTitle.textContent = "Voce e o host";
-  phText.textContent = "Inicie a transmissao quando estiver pronto.";
+  phTitle.textContent = "Você é o host";
+  phText.textContent = "Inicie a transmissão quando estiver pronto.";
   enableChat();
-  addSystem("Voce entrou como host.");
+  addSystem("Você entrou como host.");
 }
 
 function setViewerWaiting(data){
@@ -370,11 +361,21 @@ function setViewerApproved(data){
   waitOverlay.classList.remove("show");
   viewerControls.style.display = "block";
   roomTitle.textContent = data.roomName || roomId;
-  phTitle.textContent = "Aguardando transmissao";
-  phText.textContent = "O host ainda nao compartilhou a tela.";
+  phTitle.textContent = "Aguardando transmissão";
+  phText.textContent = "O host ainda não compartilhou a tela.";
   enableChat();
-  addSystem("Voce entrou na sala.");
-  if (data.isStreaming) socket.emit("request-stream");
+  addSystem("Você entrou na sala.");
+  
+  if (data.isStreaming) {
+    liveBadge.classList.add("show");
+    playOverlay.classList.add("show");
+  }
+}
+
+function iniciarAssistir() {
+  playOverlay.classList.remove("show");
+  toast("Conectando à transmissão...");
+  socket.emit("request-stream");
 }
 
 function resolutionConstraints(){
@@ -385,7 +386,7 @@ function resolutionConstraints(){
 }
 
 /* ============================================================
-   CAPTURA PADRÃO NATIVA (LIMPA E ESTÁVEL)
+   HOST - TRANSMISSÃO ANTI-ECO (SISTEMA DE MUTE NO HOST)
    ============================================================ */
 async function toggleStream(){
   if (!isHost) return;
@@ -401,13 +402,16 @@ async function toggleStream(){
         }
       });
 
+      // MUTA O VÍDEO NO PC DO HOST PARA NUNCA GERAR ECO LOCAL!
+      // O Host ouve o jogo normalmente no Windows.
       video.srcObject = localStream;
-      video.muted = true; // MUTA APENAS O PREVIEW NO SITE DO HOST (Não afeta o som do seu Windows!)
+      video.muted = true;
       video.volume = 0;
       video.classList.add("active");
 
       placeholder.style.display = "none";
-      streamBtn.textContent = "⏹ Parar transmissao";
+      liveBadge.classList.add("show");
+      streamBtn.textContent = "⏹ Parar transmissão";
       streamBtn.classList.add("red");
 
       socket.emit("host-live");
@@ -426,143 +430,127 @@ async function toggleStream(){
   }
 
   if (statsInterval) clearInterval(statsInterval);
-  localStream.getTracks().forEach(t => t.stop());
-  localStream = null;
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
   viewerConnections.forEach(pc => { try{pc.close()}catch{} });
   viewerConnections.clear();
   video.srcObject = null;
   video.classList.remove("active");
   placeholder.style.display = "block";
-  phTitle.textContent = "Voce e o host";
-  phText.textContent = "Inicie a transmissao quando estiver pronto.";
+  liveBadge.classList.remove("show");
+  phTitle.textContent = "Você é o host";
+  phText.textContent = "Inicie a transmissão quando estiver pronto.";
   streamBtn.textContent = "📡 Transmitir tela";
   streamBtn.classList.remove("red");
   socket.emit("host-stop");
 }
 
 /* ============================================================
-   SINALIZAÇÃO SOCKET E WEBRTC
+   SINALIZAÇÃO WEBRTC MULTI-VIEWER (1 HOST -> N VIEWERS)
    ============================================================ */
-if (isHost) {
-  const hostKey = localStorage.getItem("hostKey_" + roomId);
-  if (!hostKey) {
-    alert("Este navegador nao tem a chave de dono desta sala. Crie a sala novamente.");
-    location.href = "/";
-  } else {
-    socket.emit("join-host", { roomId, hostKey });
-  }
-} else {
-  socket.emit("request-entry", { roomId, nickname: viewerName });
-}
-
-socket.on("join-error", (msg) => { alert(msg || "Nao foi possivel entrar."); location.href = "/"; });
-socket.on("host-ready", (data) => { setHostUI(data); viewerCount.textContent = data.viewers || 0; });
-socket.on("waiting-approval", (data) => setViewerWaiting(data));
-socket.on("entry-approved", (data) => setViewerApproved(data));
-socket.on("entry-rejected", () => { alert("Seu pedido foi recusado."); location.href = "/"; });
-
-socket.on("entry-requested", ({ viewerId, nickname }) => {
-  if (!isHost) return;
-  if (document.getElementById("req_" + viewerId)) return;
-  if (requestsEl.querySelector("div[style]")) requestsEl.innerHTML = "";
-
-  const box = document.createElement("div");
-  box.className = "req";
-  box.id = "req_" + viewerId;
-  box.innerHTML = `
-    <p>${escapeHTML(nickname)}</p>
-    <div class="actions">
-      <button class="btn" onclick="decidir('${viewerId}', true)">Aceitar</button>
-      <button class="btn red" onclick="decidir('${viewerId}', false)">Recusar</button>
-    </div>
-  `;
-  requestsEl.appendChild(box);
-  toast("Pedido: " + nickname);
-});
-
-socket.on("viewer-disconnected", ({ viewerId }) => {
-  const el = document.getElementById("req_" + viewerId);
-  if (el) el.remove();
-  if (!requestsEl.children.length) {
-    requestsEl.innerHTML = '<div style="color:#949ba4;font-size:13px">Nenhum pedido pendente.</div>';
-  }
-});
-
-function decidir(viewerId, approved){
-  socket.emit("decide-entry", { viewerId, approved });
-  const el = document.getElementById("req_" + viewerId);
-  if (el) el.remove();
-  if (!requestsEl.children.length) {
-    requestsEl.innerHTML = '<div style="color:#949ba4;font-size:13px">Nenhum pedido pendente.</div>';
-  }
-}
 
 socket.on("viewer-ready", async ({ viewerId }) => {
   if (!isHost || !localStream) return;
+
   try {
     if (viewerConnections.has(viewerId)) {
       try { viewerConnections.get(viewerId).close(); } catch {}
     }
+
+    // Cria uma conexão exclusiva para CADA espectador
     const pc = new RTCPeerConnection(rtcConfig);
     viewerConnections.set(viewerId, pc);
-    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
 
     pc.onicecandidate = (ev) => {
-      if (ev.candidate) socket.emit("webrtc-ice", { to: viewerId, candidate: ev.candidate });
+      if (ev.candidate) {
+        socket.emit("webrtc-ice", { to: viewerId, candidate: ev.candidate });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+        viewerConnections.delete(viewerId);
+      }
     };
 
     const offer = await pc.createOffer();
-    const hdOffer = new RTCSessionDescription({ type: offer.type, sdp: optimizeSDPForHD(offer.sdp) });
+    await pc.setLocalDescription(offer);
 
-    await pc.setLocalDescription(hdOffer);
     socket.emit("webrtc-offer", { to: viewerId, offer: pc.localDescription });
   } catch (e) {
-    console.error(e);
+    console.error("Erro no host:", e);
   }
 });
 
 socket.on("webrtc-offer", async ({ from, offer }) => {
   if (isHost) return;
+
   try {
-    if (viewerPC) viewerPC.close();
+    if (viewerPC) { try{ viewerPC.close(); }catch{} }
+
     viewerPC = new RTCPeerConnection(rtcConfig);
     pendingIce = [];
-    const ms = new MediaStream();
-    video.srcObject = ms;
+
+    const mediaStream = new MediaStream();
+    video.srcObject = mediaStream;
 
     viewerPC.ontrack = async (ev) => {
-      if (!ms.getTracks().some(t => t.id === ev.track.id)) ms.addTrack(ev.track);
+      if (!mediaStream.getTracks().some(t => t.id === ev.track.id)) {
+        mediaStream.addTrack(ev.track);
+      }
+
       video.classList.add("active");
       placeholder.style.display = "none";
+      playOverlay.classList.remove("show");
+      liveBadge.classList.add("show");
+
+      // ESPECTADOR OUVE O SOM EM VOLUME MÁXIMO
       video.muted = false;
       video.volume = 1.0;
-      startStatsMonitoring();
 
-      try { await video.play(); } catch {
+      try {
+        await video.play();
+      } catch (err) {
         video.muted = true;
         await video.play().catch(()=>{});
-        toast("Clique no Mudo/Volume para liberar audio");
+        toast("Clique na tela para liberar o áudio");
       }
+
+      startStatsMonitoring();
     };
 
     viewerPC.onicecandidate = (ev) => {
-      if (ev.candidate) socket.emit("webrtc-ice", { to: from, candidate: ev.candidate });
+      if (ev.candidate) {
+        socket.emit("webrtc-ice", { to: from, candidate: ev.candidate });
+      }
+    };
+
+    viewerPC.oniceconnectionstatechange = () => {
+      if (viewerPC.iceConnectionState === "failed") {
+        toast("Reconectando...");
+        socket.emit("request-stream");
+      }
     };
 
     await viewerPC.setRemoteDescription(new RTCSessionDescription(offer));
+
     for (const c of pendingIce) {
       await viewerPC.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{});
     }
     pendingIce = [];
 
     const answer = await viewerPC.createAnswer();
-    const hdAnswer = new RTCSessionDescription({ type: answer.type, sdp: optimizeSDPForHD(answer.sdp) });
+    await viewerPC.setLocalDescription(answer);
 
-    await viewerPC.setLocalDescription(hdAnswer);
     socket.emit("webrtc-answer", { to: from, answer: viewerPC.localDescription });
   } catch (e) {
-    console.error(e);
-    toast("Erro ao conectar na transmissao");
+    console.error("Erro no viewer:", e);
   }
 });
 
@@ -570,16 +558,22 @@ socket.on("webrtc-answer", async ({ from, answer }) => {
   if (!isHost) return;
   const pc = viewerConnections.get(from);
   if (!pc) return;
-  try { await pc.setRemoteDescription(new RTCSessionDescription(answer)); } catch {}
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+  } catch (e) {}
 });
 
 socket.on("webrtc-ice", async ({ from, candidate }) => {
   if (!candidate) return;
+
   if (isHost) {
     const pc = viewerConnections.get(from);
-    if (pc && pc.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(()=>{});
+    if (pc && pc.remoteDescription) {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(()=>{});
+    }
     return;
   }
+
   if (viewerPC && viewerPC.remoteDescription) {
     await viewerPC.addIceCandidate(new RTCIceCandidate(candidate)).catch(()=>{});
   } else {
@@ -587,11 +581,15 @@ socket.on("webrtc-ice", async ({ from, candidate }) => {
   }
 });
 
+/* ============================================================
+   EVENTOS DA SALA
+   ============================================================ */
+
 socket.on("stream-is-live", () => {
   if (isHost) return;
-  phTitle.textContent = "Transmissao ao vivo";
-  phText.textContent = "Conectando...";
-  socket.emit("request-stream");
+  liveBadge.classList.add("show");
+  playOverlay.classList.add("show");
+  toast("Transmissão iniciada!");
 });
 
 socket.on("stream-stopped", () => {
@@ -600,8 +598,10 @@ socket.on("stream-stopped", () => {
   if (viewerPC) { try{viewerPC.close()}catch{} viewerPC=null; }
   video.srcObject = null;
   video.classList.remove("active");
+  liveBadge.classList.remove("show");
+  playOverlay.classList.remove("show");
   placeholder.style.display = "block";
-  phTitle.textContent = "Transmissao encerrada";
+  phTitle.textContent = "Transmissão encerrada";
   phText.textContent = "O host parou de compartilhar a tela.";
 });
 
@@ -610,15 +610,22 @@ socket.on("host-left", () => {
   if (viewerPC) { try{viewerPC.close()}catch{} viewerPC=null; }
   video.srcObject = null;
   video.classList.remove("active");
+  liveBadge.classList.remove("show");
+  playOverlay.classList.remove("show");
   placeholder.style.display = "block";
   phTitle.textContent = "Host desconectou";
   phText.textContent = "Aguardando o host voltar...";
 });
 
 socket.on("room-expired", () => { alert("A sala expirou."); location.href = "/"; });
+
 socket.on("room-status", (data) => {
   viewerCount.textContent = data.viewers || 0;
   if (data.roomName) roomTitle.textContent = data.roomName;
+  if (!isHost && data.isStreaming && !video.classList.contains("active")) {
+    liveBadge.classList.add("show");
+    playOverlay.classList.add("show");
+  }
 });
 
 socket.on("chat-message", (msg) => addChat(msg.from, msg.text, !!msg.isHost));
