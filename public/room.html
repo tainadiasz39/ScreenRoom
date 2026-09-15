@@ -14,7 +14,7 @@ body{display:flex;flex-direction:column}
 }
 .top .name{font-weight:bold;color:#fff;display:flex;align-items:center;gap:8px}
 .top .meta{color:#b5bac1;font-size:13px}
-.badge-hd{background:#23a55a;color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px}
+.badge-hd{background:#5865f2;color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px}
 
 .btn{
   height:36px;border:0;border-radius:8px;background:#5865f2;color:#fff;
@@ -95,7 +95,7 @@ select{height:36px;border:0;border-radius:8px;background:#1e1f22;color:#fff;padd
 <header class="top">
   <div class="name">
     <span id="roomTitle">Sala</span>
-    <span class="badge-hd">ÁUDIO AUTOMÁTICO ATIVO</span>
+    <span class="badge-hd">OPUS HD 192K</span>
   </div>
   <div class="meta">👥 <span id="viewerCount">0</span> assistindo</div>
   <button class="btn gray" onclick="location.href='/'">Voltar às salas</button>
@@ -385,7 +385,7 @@ function resolutionConstraints(){
 }
 
 /* ============================================================
-   SOLICITAÇÃO DE TELA COM ÁUDIO AUTOMÁTICO FORÇADO (systemAudio: include)
+   CAPTURA PADRÃO NATIVA (LIMPA E ESTÁVEL)
    ============================================================ */
 async function toggleStream(){
   if (!isHost) return;
@@ -395,18 +395,14 @@ async function toggleStream(){
       localStream = await navigator.mediaDevices.getDisplayMedia({
         video: resolutionConstraints(),
         audio: {
-          systemAudio: "include",          // FORÇA O CHROME A MARCAR A CAIXA DE ÁUDIO POR PADRÃO
-          surfaceSwitching: "include",     // PERMITE MUDAR DE JANELA COM ÁUDIO
-          selfBrowserSurface: "include",
-          suppressLocalAudioPlayback: true,// EVITA QUE O HOST OUÇA O PRÓPRIO SOM
-          echoCancellation: false,         // ÁUDIO LIMPO DE JOGO/MÚSICA
+          echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false
         }
       });
 
       video.srcObject = localStream;
-      video.muted = true;
+      video.muted = true; // MUTA APENAS O PREVIEW NO SITE DO HOST (Não afeta o som do seu Windows!)
       video.volume = 0;
       video.classList.add("active");
 
@@ -415,14 +411,7 @@ async function toggleStream(){
       streamBtn.classList.add("red");
 
       socket.emit("host-live");
-      
-      const hasAudio = localStream.getAudioTracks().length > 0;
-      if (hasAudio) {
-        toast("Transmissão iniciada com ÁUDIO AUTOMÁTICO!");
-      } else {
-        toast("Transmissão iniciada!");
-      }
-
+      toast("Transmissão iniciada!");
       startStatsMonitoring();
 
       localStream.getVideoTracks()[0].onended = () => {
